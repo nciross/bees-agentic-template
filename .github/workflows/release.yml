@@ -1,0 +1,65 @@
+name: Release
+
+# Publishes bees-agentic to npm whenever a version tag (v*) is pushed.
+# Create one with: npm version <patch|minor|major|prerelease> && git push --follow-tags
+# See docs/releasing.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the GitHub Release
+  id-token: write # npm trusted publishing (OIDC) + provenance
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      - name: Check tag matches package.json version
+        id: meta
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+          # 0.2.0-alpha.1 -> dist-tag "alpha"; 0.2.0 -> "latest"
+          if [[ "$version" == *-* ]]; then
+            tag=$(echo "${version#*-}" | cut -d. -f1)
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            tag=latest
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "dist-tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Publishing $version with dist-tag $tag"
+
+      - name: Publish
+        # Uses npm trusted publishing (no token) once configured on npmjs.com.
+        # NPM_TOKEN is only a fallback, e.g. for the very first publish.
+        run: npm publish --provenance --access public --tag ${{ steps.meta.outputs.dist-tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --generate-notes \
+            $([ "${{ steps.meta.outputs.prerelease }}" = "true" ] && echo --prerelease)

@@ -9,6 +9,7 @@
 **A reusable, team-shareable agentic dev environment — install it into any existing project and every teammate gets the same skills, agents, rules and guardrails, whatever AI tool they use.**
 
 [![CI](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml/badge.svg)](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/bees-agentic?label=npm&color=cb3837)](https://www.npmjs.com/package/bees-agentic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 [![Status: early preview](https://img.shields.io/badge/status-early%20preview-orange.svg)](#-roadmap)
