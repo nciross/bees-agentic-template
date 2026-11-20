@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <rect width="1280" height="640" fill="#0D1117"/>
+  <g fill="none" stroke="#FFB703" stroke-opacity=".10" stroke-width="4" transform="translate(80 0)">
+    <polygon points="1100,40 1160,75 1160,145 1100,180 1040,145 1040,75"/>
+    <polygon points="1180,180 1240,215 1240,285 1180,320 1120,285 1120,215"/>
+    <polygon points="1100,320 1160,355 1160,425 1100,460 1040,425 1040,355"/>
+    <polygon points="1180,460 1240,495 1240,565 1180,600 1120,565 1120,495"/>
+  </g>
+  <svg x="70" y="70" width="500" height="500" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="hive" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE680"/>
+      <stop offset="1" stop-color="#FFB703"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE14D"/>
+      <stop offset="1" stop-color="#FFB000"/>
+    </linearGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B2A4A"/>
+      <stop offset="1" stop-color="#0B1326"/>
+    </linearGradient>
+    <clipPath id="bodyClip">
+      <ellipse cx="256" cy="352" rx="92" ry="82"/>
+    </clipPath>
+    <style>
+      .wing-l, .wing-r { transform-box: view-box; }
+      .wing-l { transform-origin: 214px 262px; animation: flap-l .5s ease-in-out infinite alternate; }
+      .wing-r { transform-origin: 298px 262px; animation: flap-r .5s ease-in-out infinite alternate; }
+      .glow { animation: glow 1.6s ease-in-out infinite alternate; }
+      .glow.r { animation-delay: .8s; }
+      .blink { transform-box: fill-box; transform-origin: center; animation: blink 4s infinite; }
+      @keyframes flap-l { to { transform: rotate(10deg); } }
+      @keyframes flap-r { to { transform: rotate(-10deg); } }
+      @keyframes glow { to { opacity: .45; } }
+      @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+      @media (prefers-reduced-motion: reduce) {
+        .wing-l, .wing-r, .glow, .blink { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <!-- honeycomb badge -->
+  <polygon points="256,20 460,138 460,374 256,492 52,374 52,138" fill="url(#hive)" stroke="#2B1D00" stroke-width="12" stroke-linejoin="round"/>
+  <g fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="5" stroke-linejoin="round">
+    <polygon points="104,300 126,287 148,300 148,326 126,339 104,326"/>
+    <polygon points="364,402 386,389 408,402 408,428 386,441 364,428"/>
+    <polygon points="380,170 398,160 416,170 416,191 398,201 380,191"/>
+  </g>
+
+  <!-- wings with circuit traces -->
+  <g class="wing-l">
+    <g transform="rotate(24 150 236)">
+      <ellipse cx="150" cy="236" rx="86" ry="50" fill="#D7F6FF" fill-opacity=".92" stroke="#1D3557" stroke-width="8"/>
+      <path d="M100 236 H160 L178 222 M128 236 L140 252 H186" fill="none" stroke="#4CC9F0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="100" cy="236" r="6" fill="#4CC9F0"/><circle cx="186" cy="252" r="6" fill="#4CC9F0"/>
+    </g>
+  </g>
+  <g class="wing-r">
+    <g transform="rotate(-24 362 236)">
+      <ellipse cx="362" cy="236" rx="86" ry="50" fill="#D7F6FF" fill-opacity=".92" stroke="#1D3557" stroke-width="8"/>
+      <path d="M412 236 H352 L334 222 M384 236 L372 252 H326" fill="none" stroke="#4CC9F0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="412" cy="236" r="6" fill="#4CC9F0"/><circle cx="326" cy="252" r="6" fill="#4CC9F0"/>
+    </g>
+  </g>
+
+  <!-- arms: left resting, right waving -->
+  <path d="M176 344 Q136 352 126 386" fill="none" stroke="#2B1D00" stroke-width="20" stroke-linecap="round"/>
+  <path d="M176 344 Q136 352 126 386" fill="none" stroke="#9AA5B8" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="124" cy="392" r="14" fill="#9AA5B8" stroke="#2B1D00" stroke-width="7"/>
+  <path d="M336 340 Q378 330 388 292" fill="none" stroke="#2B1D00" stroke-width="20" stroke-linecap="round"/>
+  <path d="M336 340 Q378 330 388 292" fill="none" stroke="#9AA5B8" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="390" cy="286" r="14" fill="#9AA5B8" stroke="#2B1D00" stroke-width="7"/>
+
+  <!-- stinger -->
+  <path d="M236 424 L276 424 L256 466 Z" fill="#2B1D00" stroke="#2B1D00" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- body with metal bands and rivets -->
+  <ellipse cx="256" cy="352" rx="92" ry="82" fill="url(#metal)"/>
+  <g clip-path="url(#bodyClip)">
+    <rect x="150" y="322" width="212" height="24" fill="#2B1D00"/>
+    <rect x="150" y="372" width="212" height="24" fill="#2B1D00"/>
+    <g fill="#FFC300">
+      <circle cx="200" cy="334" r="4"/><circle cx="256" cy="334" r="4"/><circle cx="312" cy="334" r="4"/>
+      <circle cx="200" cy="384" r="4"/><circle cx="256" cy="384" r="4"/><circle cx="312" cy="384" r="4"/>
+    </g>
+  </g>
+  <ellipse cx="256" cy="352" rx="92" ry="82" fill="none" stroke="#2B1D00" stroke-width="10"/>
+  <ellipse cx="222" cy="296" rx="22" ry="9" fill="#FFFFFF" fill-opacity=".45" transform="rotate(-20 222 296)"/>
+
+  <!-- neck -->
+  <rect x="234" y="244" width="44" height="30" rx="6" fill="#9AA5B8" stroke="#2B1D00" stroke-width="8"/>
+
+  <!-- antennae -->
+  <path d="M214 116 Q204 76 174 62" fill="none" stroke="#2B1D00" stroke-width="9" stroke-linecap="round"/>
+  <path d="M298 116 Q308 76 338 62" fill="none" stroke="#2B1D00" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="170" cy="58" r="15" fill="#4CF2FF" stroke="#2B1D00" stroke-width="7"/>
+  <circle cx="342" cy="58" r="15" fill="#4CF2FF" stroke="#2B1D00" stroke-width="7"/>
+  <circle class="glow" cx="170" cy="58" r="26" fill="#4CF2FF" fill-opacity=".35"/>
+  <circle class="glow r" cx="342" cy="58" r="26" fill="#4CF2FF" fill-opacity=".35"/>
+
+  <!-- robot head -->
+  <rect x="164" y="108" width="184" height="144" rx="52" fill="url(#metal)" stroke="#2B1D00" stroke-width="10"/>
+  <rect x="184" y="136" width="144" height="86" rx="36" fill="url(#visor)" stroke="#2B1D00" stroke-width="6"/>
+  <!-- glowing eyes -->
+  <g class="blink">
+    <ellipse cx="226" cy="174" rx="14" ry="19" fill="#4CF2FF"/>
+    <ellipse cx="286" cy="174" rx="14" ry="19" fill="#4CF2FF"/>
+    <circle cx="231" cy="166" r="5" fill="#FFFFFF"/>
+    <circle cx="291" cy="166" r="5" fill="#FFFFFF"/>
+  </g>
+  <path d="M238 200 Q256 214 274 200" fill="none" stroke="#4CF2FF" stroke-width="6" stroke-linecap="round"/>
+  <!-- cheeks & ear bolts -->
+  <circle cx="190" cy="236" r="9" fill="#FF8FAB"/>
+  <circle cx="322" cy="236" r="9" fill="#FF8FAB"/>
+  <circle cx="164" cy="180" r="11" fill="#9AA5B8" stroke="#2B1D00" stroke-width="6"/>
+  <circle cx="348" cy="180" r="11" fill="#9AA5B8" stroke="#2B1D00" stroke-width="6"/>
+  <rect x="200" y="122" width="44" height="7" rx="3.5" fill="#FFFFFF" fill-opacity=".55"/>
+  </svg>
+  <text x="620" y="290" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="140" font-weight="800" fill="#FFC300">bees</text>
+  <text x="626" y="360" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="40" font-weight="600" fill="#E6EDF3">One hive, every agent.</text>
+  <text x="626" y="420" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#8B949E">Shareable agentic dev environment for</text>
+  <text x="626" y="458" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#8B949E">Claude Code · Copilot · Cursor · Codex</text>
+</svg>

@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🐝 bees
+<img src="assets/logo.svg" alt="bees logo: a cute robot bee waving from a honeycomb" width="200">
+
+# bees
 
 <h3>One hive, every agent.</h3>
 
