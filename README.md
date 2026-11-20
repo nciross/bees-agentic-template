@@ -13,7 +13,7 @@
 ![Cursor](https://img.shields.io/badge/Cursor-supported-000000)
 ![Codex](https://img.shields.io/badge/Codex-supported-10a37f)
 
-[Why bees](#-why-bees) · [How it works](#-how-it-works) · [Packs](#-packs) · [Quick start](#-quick-start) · [Team sharing](#-share-it-with-your-team) · [Roadmap](#-roadmap)
+[Why bees](#-why-bees) · [How it works](#-how-it-works) · [Packs](#-packs) · [Memory](#-elephant---goldfish--memory-that-scales) · [The hive](#-meet-the-hive) · [Quick start](#-quick-start) · [Team sharing](#-share-it-with-your-team) · [Roadmap](#-roadmap)
 
 </div>
 
@@ -76,6 +76,8 @@ flowchart LR
 | 🧪 **testing** | Test-writer agent, TDD workflow skill | bees |
 | 🌿 **git-flow** | GitHub flow commands: branch → conventional commit → PR | bees |
 | 📚 **docs** | README, ADR and changelog skills | bees |
+| 🐘🐟 **memory** | Elephant (long-term team memory in git) + Goldfish (short-term session memory, summarized then forgotten) | bees |
+| 👥 **team** | A named crew of agents — tech lead, architect, developer, designer, reviewer, security, QA, writer, token optimizer | bees |
 
 ### Supported tools
 
@@ -89,6 +91,40 @@ flowchart LR
 | Plugin marketplace | ✅ | ➖ | ➖ | ➖ |
 
 <sub>✅ native · ➖ not available in the tool; bees falls back to rules in `AGENTS.md`.</sub>
+
+## 🐘 Elephant & 🐟 Goldfish — memory that scales
+
+Agents forget everything between sessions — or remember too much and burn tokens. bees splits memory in two:
+
+| | 🐘 **Elephant** — never forgets | 🐟 **Goldfish** — forgets on purpose |
+|---|---|---|
+| **What** | Decisions, conventions, lessons learned, glossary | What happened in *this* session |
+| **Where** | `.bees/memory/` — committed, reviewed, shared with the whole team | `.bees/goldfish/` — gitignored, local |
+| **Lifetime** | Forever (until compacted) | One session → a short handoff note |
+| **Token cost** | Only a tiny index is always loaded; entries are pulled on demand | Near zero — summarized, then dropped |
+
+A goldfish note that keeps coming back gets **promoted** to elephant memory through a normal pull request — so knowledge grows with review, not by accident.
+
+## 👥 Meet the hive
+
+bees ships a crew of specialised agents. Each has a name and a role, and writes issues, reviews and PR comments **like a human teammate would** — clear, friendly, to the point.
+
+| | Agent | Role | Typical work |
+|---|---|---|---|
+| 👑 | **Maya** | Tech Lead | Breaks work into tasks, routes them to the right agent, final go/no-go |
+| 🏛️ | **Omar** | Architect | System design, ADRs, trade-off analysis |
+| 🛠️ | **Sam** | Developer | Implements features test-first |
+| 🎨 | **Lina** | Designer | UI/UX with Impeccable, design tokens, accessibility |
+| 🔍 | **Kenji** | Reviewer | Code review with actionable, kind comments |
+| 🛡️ | **Aisha** | Security Engineer | Threat models, secure-coding review, dependency audit |
+| 🧪 | **Leo** | QA Engineer | Test plans, edge cases, regression checks |
+| ✍️ | **Nora** | Writer | Issues, PR descriptions, docs, changelogs |
+| 🪙 | **Theo** | Token Optimizer | Context budgets, model routing, memory compaction |
+
+Rename them, drop some, or add your own in `bees.yaml`.
+
+> [!NOTE]
+> **Humans stay in control.** Agents *draft* issues and comments into `.bees/drafts/`; nothing is posted to GitHub until a human approves. Every post ends with a small signature — `— Maya, Tech Lead · bees agent 🐝` — so readers always know an agent wrote it.
 
 ## 🚀 Quick start
 
@@ -137,6 +173,15 @@ packs:
   - testing
   - git-flow
   - docs
+  - memory      # 🐘 elephant + 🐟 goldfish
+  - team
+team:
+  tech-lead: { name: Maya }
+  designer:  { name: Lina }
+  writer:    { name: Nora, post: draft }   # draft → human approves → gh posts
+  token-optimizer:
+    name: Theo
+    budgets: { agents-md: 2000, skill: 1500 }   # tokens
 overrides:
   security:
     block-paths: [".env*", "secrets/**"]
@@ -158,6 +203,8 @@ overrides:
 - [ ] Adapters: Copilot, Cursor, Codex
 - [ ] Packs: design (Impeccable), spec (Spec Kit), security
 - [ ] Packs: quality, testing, git-flow, docs
+- [ ] Pack: memory — 🐘 elephant & 🐟 goldfish
+- [ ] Pack: team — named agents, draft → approve → post workflow
 - [ ] **v0.1.0** release on npm
 
 ## 🤝 Contributing
