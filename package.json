@@ -1,0 +1,48 @@
+{
+  "name": "bees-agentic",
+  "version": "0.1.0-alpha.0",
+  "description": "One hive, every agent. Install a shared agentic dev environment (skills, agents, rules) into any project for Claude Code, Copilot, Cursor and Codex.",
+  "license": "MIT",
+  "author": "nciross",
+  "type": "module",
+  "bin": {
+    "bees": "bin/bees.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "packs/",
+    "assets/cli-banner.ansi",
+    "assets/cli-banner-plain.txt"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/unit/*.test.js\" \"test/e2e/*.test.js\"",
+    "test:unit": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/*.test.js\"",
+    "test:real": "node scripts/test-real-project.mjs",
+    "lint:md": "npx --yes markdownlint-cli2@0.24.2"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nciross/bees-agentic-template.git"
+  },
+  "homepage": "https://github.com/nciross/bees-agentic-template#readme",
+  "bugs": "https://github.com/nciross/bees-agentic-template/issues",
+  "keywords": [
+    "agents",
+    "ai",
+    "claude-code",
+    "copilot",
+    "cursor",
+    "codex",
+    "agent-skills",
+    "agents-md",
+    "cli"
+  ]
+}

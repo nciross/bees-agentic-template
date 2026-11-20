@@ -1,0 +1,10 @@
+name: core
+version: 0.1.0
+description: Shared AGENTS.md conventions, a project-context skill and safe defaults for every tool.
+license: MIT
+# Rendered into each tool's native permission settings where the tool has them.
+permissions:
+  deny:
+    - Read(./.env)
+    - Read(./.env.*)
+    - Read(./secrets/**)

@@ -24,10 +24,14 @@ Thanks for helping the hive grow! This guide explains how we work.
 ## Local checks
 
 ```bash
-npx markdownlint-cli2   # lint all Markdown
+npm install
+npm test                               # unit + end-to-end tests
+npm run lint:md                        # lint all Markdown
+npm run test:real -- ../some-project   # try the CLI on a real project (never modifies it)
+npm link                               # use your working copy as `bees`
 ```
 
-More checks (unit tests, `bees sync --check`) arrive with the CLI.
+See [docs/testing.md](docs/testing.md) for how the test suites are organised.
 
 ## Architecture decisions
 
