@@ -1,0 +1,12 @@
+{
+  "config": {
+    "default": true,
+    "MD013": false,  // line length: prose and tables wrap naturally
+    "MD033": false,  // inline HTML: used for the centered README hero
+    "MD041": false,  // first line heading: README starts with a <div>
+    "MD024": { "siblings_only": true },
+    "MD060": false   // table pipe spacing: compact emoji tables are fine
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", "**/node_modules/**", "dist/**"]
+}

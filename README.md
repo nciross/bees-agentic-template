@@ -2,9 +2,11 @@
 
 # 🐝 bees
 
-### One hive, every agent.
+<h3>One hive, every agent.</h3>
+
 **A reusable, team-shareable agentic dev environment — install it into any existing project and every teammate gets the same skills, agents, rules and guardrails, whatever AI tool they use.**
 
+[![CI](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml/badge.svg)](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 [![Status: early preview](https://img.shields.io/badge/status-early%20preview-orange.svg)](#-roadmap)
@@ -194,10 +196,11 @@ overrides:
 3. After merge, every teammate gets the same setup in whichever tool they use — Claude Code users are even prompted to install the bees plugins automatically via the committed `.claude/settings.json`.
 4. Need something project-specific? Write it **outside** the bees markers — `bees sync` will never overwrite it.
 
-## 🗺️ Roadmap
+## 📍 Roadmap
 
 - [x] Repository, README & MIT license
-- [ ] Repo hygiene: contributing guide, security policy, templates, CI
+- [x] Repo hygiene: contributing guide, security policy, templates, CI
+- [x] ADR 0001: install scopes (user · project · local)
 - [ ] Pack format: JSON schemas, `core` pack, `AGENTS.md` template
 - [ ] CLI core: `init`, `sync`, `--check`, Claude Code adapter, plugin marketplace
 - [ ] Adapters: Copilot, Cursor, Codex
@@ -216,7 +219,7 @@ bees uses **[GitHub flow](https://docs.github.com/en/get-started/using-github/gi
 3. Open a pull request — CI must pass before merge.
 4. `main` is always releasable.
 
-New pack ideas are very welcome — open an issue describing the workflow it should teach your agents.
+New pack ideas are very welcome — open a [new pack proposal](https://github.com/nciross/bees-agentic-template/issues/new?template=new_pack.yml). See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and [docs/adr/](docs/adr/) for architecture decisions.
 
 ## 🙏 Credits
 

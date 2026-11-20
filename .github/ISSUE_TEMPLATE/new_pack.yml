@@ -1,0 +1,34 @@
+name: 🧩 New pack proposal
+description: Propose a new pack of skills, agents, rules or hooks.
+labels: [pack, triage]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Pack name
+      placeholder: "e.g. observability"
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow it teaches your agents
+      description: What should agents do differently once this pack is installed?
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      options:
+        - Written by bees
+        - Upstream project, pinned (link it below)
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Default install scope
+      options: [project, user, local]
+  - type: textarea
+    id: upstream
+    attributes:
+      label: Upstream link & license (if any)
