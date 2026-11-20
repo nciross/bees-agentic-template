@@ -1,0 +1,4 @@
+name: team-demo
+version: 0.0.1
+description: Test fixture pack with a sub-agent and a rule.
+license: MIT

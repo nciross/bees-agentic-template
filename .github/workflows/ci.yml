@@ -22,3 +22,57 @@ jobs:
         with:
           node-version: 24
       - run: npx --yes markdownlint-cli2@0.24.2
+
+  test:
+    name: Test (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  real-projects:
+    name: Real project (${{ matrix.repo }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - https://github.com/expressjs/express
+          - https://github.com/pallets/flask
+          - https://github.com/modelcontextprotocol/typescript-sdk
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:real -- ${{ matrix.repo }}
+
+  install:
+    name: Install from tarball
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm pack
+      - run: npm install -g ./bees-agentic-*.tgz
+      - name: Run the installed CLI in an empty project
+        run: |
+          mkdir /tmp/demo && cd /tmp/demo
+          bees --version
+          bees init --yes
+          bees sync --check
+          bees doctor

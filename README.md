@@ -9,6 +9,7 @@
 **A reusable, team-shareable agentic dev environment — install it into any existing project and every teammate gets the same skills, agents, rules and guardrails, whatever AI tool they use.**
 
 [![CI](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml/badge.svg)](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/bees-agentic?label=npm&color=cb3837)](https://www.npmjs.com/package/bees-agentic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
 [![Status: early preview](https://img.shields.io/badge/status-early%20preview-orange.svg)](#-roadmap)
@@ -22,7 +23,7 @@
 </div>
 
 > [!NOTE]
-> **bees is in early preview.** This README describes the target design; features land pull request by pull request — see the [roadmap](#-roadmap) for what's shipped.
+> **bees is in early preview.** The CLI (`init`, `sync`, `add`, `remove`, `doctor`) and the `core` pack work today for all four tools; the other packs land pull request by pull request — see the [roadmap](#-roadmap).
 
 ---
 
@@ -33,7 +34,7 @@ Every developer on a team ends up hand-tuning their own AI setup: a different `C
 **bees** fixes that:
 
 - 🏠 **One source of truth** — skills, agents, commands, rules and hooks are written once, as portable [Agent Skills](https://agentskills.io) (`SKILL.md`) plus a small `pack.yaml`.
-- 🔌 **Drop-in for existing projects** — `npx bees init` detects your stack and wires everything in. No rewrite, no new framework.
+- 🔌 **Drop-in for existing projects** — `bees init` detects your stack and wires everything in. No rewrite, no new framework.
 - 🤝 **Every tool, same behaviour** — native configs are generated for **Claude Code, GitHub Copilot, Cursor and Codex**, plus a shared `AGENTS.md`.
 - 👥 **Team-shareable by default** — commit `bees.yaml`; teammates are prompted to install the same setup automatically.
 - 📌 **Upstream, pinned** — best-in-class community packs (Impeccable, GitHub Spec Kit, security skills) are installed from their official sources at pinned versions — never copied, never drifting.
@@ -132,19 +133,25 @@ Rename them, drop some, or add your own in `bees.yaml`.
 
 ## 🚀 Quick start
 
-> [!IMPORTANT]
-> The CLI ships in **v0.1.0**. Until then, track progress in the [roadmap](#-roadmap).
+Requires **Node.js 22+**. Your project can be in any language.
 
 ### Option A: any tool, with the CLI
 
 ```bash
 cd your-existing-project
-npx bees init          # pick tools + packs interactively
-git add bees.yaml bees.lock AGENTS.md .claude .github .cursor
-git commit -m "chore: add bees agentic dev environment"
+npx github:nciross/bees-agentic-template init   # pick tools + packs interactively
+git status                                      # review what bees generated
+git add -A && git commit -m "chore: add bees agentic dev environment"
 ```
 
+Prefer a permanent `bees` command? `npm install -g github:nciross/bees-agentic-template`. Every install option (global, dev dependency, from source, CI) is in **[docs/install.md](docs/install.md)**.
+
+> [!WARNING]
+> The npm package is `bees-agentic`, not `bees` (that name belongs to an unrelated package). Never run `npx bees`.
+
 ### Option B: Claude Code only, as a plugin marketplace
+
+> Coming with the plugin marketplace milestone (see the [roadmap](#-roadmap)).
 
 ```text
 /plugin marketplace add nciross/bees-agentic-template
@@ -158,11 +165,25 @@ git commit -m "chore: add bees agentic dev environment"
 | `bees init` | Detect stack, choose tools & packs, write `bees.yaml`, generate configs |
 | `bees sync` | Re-generate configs (idempotent, preserves your edits) |
 | `bees sync --check` | Fail if configs are stale — use it in CI |
-| `bees add <pack>` | Add a pack to the project |
-| `bees update` | Bump pinned upstream versions |
-| `bees doctor` | Diagnose drift and missing upstream tools |
+| `bees add <pack>` / `bees remove <pack>` | Enable or disable a pack |
+| `bees list` | List available packs |
+| `bees doctor` | Diagnose drift and broken markers |
+| `bees update` | Bump pinned upstream versions *(coming with upstream packs)* |
+
+### Test it on your project first
+
+Not ready to touch your repo? Run bees against a disposable copy and get a checklist of what works:
+
+```bash
+git clone https://github.com/nciross/bees-agentic-template && cd bees-agentic-template && npm install
+npm run test:real -- ../your-project            # or a git URL
+```
+
+Your project is never modified. See **[docs/testing.md](docs/testing.md)** for the unit, end-to-end and real-project test suites.
 
 ## ⚙️ Configuration
+
+The full target format is shown below; today only the `core` pack ships, and `team` / `overrides` are reserved for upcoming packs.
 
 ```yaml
 # bees.yaml — committed to your project
@@ -193,7 +214,7 @@ overrides:
 
 ## 👥 Share it with your team
 
-1. One person runs `npx bees init` and opens a PR.
+1. One person runs `bees init` and opens a PR.
 2. The PR adds `bees.yaml`, `bees.lock` and the generated configs.
 3. After merge, every teammate gets the same setup in whichever tool they use — Claude Code users are even prompted to install the bees plugins automatically via the committed `.claude/settings.json`.
 4. Need something project-specific? Write it **outside** the bees markers — `bees sync` will never overwrite it.
@@ -203,14 +224,16 @@ overrides:
 - [x] Repository, README & MIT license
 - [x] Repo hygiene: contributing guide, security policy, templates, CI
 - [x] ADR 0001: install scopes (user · project · local)
-- [ ] Pack format: JSON schemas, `core` pack, `AGENTS.md` template
-- [ ] CLI core: `init`, `sync`, `--check`, Claude Code adapter, plugin marketplace
-- [ ] Adapters: Copilot, Cursor, Codex
+- [x] Pack format, `core` pack, `AGENTS.md` generation
+- [x] CLI core: `init`, `sync`, `--check`, `add`, `remove`, `doctor`
+- [x] Adapters: Claude Code, Copilot, Cursor, Codex
+- [x] Tests: unit, end-to-end fixtures, real-project runner
+- [ ] Pack JSON schemas, user/local scopes (ADR 0001), Claude Code plugin marketplace
 - [ ] Packs: design (Impeccable), spec (Spec Kit), security
 - [ ] Packs: quality, testing, git-flow, docs
 - [ ] Pack: memory — 🐘 elephant & 🐟 goldfish
 - [ ] Pack: team — named agents, draft → approve → post workflow
-- [ ] **v0.1.0** release on npm
+- [ ] **v0.1.0** release on npm as `bees-agentic`
 
 ## 🤝 Contributing
 
