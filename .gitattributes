@@ -7,3 +7,4 @@
 *.jpg binary
 *.gif binary
 *.ico binary
+*.ansi text eol=lf -diff
