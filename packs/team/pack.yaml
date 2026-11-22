@@ -1,0 +1,5 @@
+name: team
+version: 0.1.0
+description: The hive - nine named agents (tech lead, architect, developer, designer, reviewer, security, QA, writer, token optimizer) and a draft -> approve -> post workflow.
+license: MIT
+requires: [core]

@@ -17,12 +17,12 @@
 ![Cursor](https://img.shields.io/badge/Cursor-supported-000000)
 ![Codex](https://img.shields.io/badge/Codex-supported-10a37f)
 
-[Quick start](#-quick-start) · [Why bees](#-why-bees) · [Commands](#-commands) · [Packs](#-packs) · [Configuration](#%EF%B8%8F-configuration) · [Team & CI](#-share-it-with-your-team) · [What's coming](#-whats-coming) · [Roadmap](#-roadmap)
+[Quick start](#-quick-start) · [Why bees](#-why-bees) · [Commands](#-commands) · [Packs](#-packs) · [Configuration](#%EF%B8%8F-configuration) · [Team & CI](#-share-it-with-your-team) · [The hive](#-meet-the-hive) · [Token budgets](#-token-budgets) · [What's coming](#-whats-coming) · [Roadmap](#-roadmap)
 
 </div>
 
 > [!NOTE]
-> **Early preview (`0.1.0-alpha`).** The CLI and the `core` pack work today in all four tools. The other packs (team agents, memory, Spec Kit, security, the software factory) are being built one pull request at a time. Each section below says whether a feature is ✅ available now or 🚧 planned.
+> **Early preview (`0.1.0-alpha`).** The CLI, `bees tokens`, and the `core` and `team` packs work today in all four tools. The other packs (memory, Spec Kit, security, the software factory) are being built one pull request at a time. Each section below says whether a feature is ✅ available now or 🚧 planned.
 
 ---
 
@@ -118,7 +118,8 @@ flowchart LR
 | `bees add <pack...>` | Enable packs, plus any packs they require, then sync |
 | `bees remove <pack...>` | Disable packs and delete the files they generated. Refuses while another pack needs them |
 | `bees list` | List available packs (● = enabled here) |
-| `bees doctor` | Check Node.js, `bees.yaml`, `bees.lock`, markers and drift |
+| `bees tokens` | Show the token cost of your agent setup per tool, against your budgets ([details](#-token-budgets)) |
+| `bees doctor` | Check Node.js, `bees.yaml`, `bees.lock`, markers, drift and token budgets |
 | `bees help <command>` | Options and examples for one command (same as `bees <command> --help`) |
 
 Handy options:
@@ -130,6 +131,8 @@ Handy options:
 | `--tools claude,copilot` | `init` | Choose tools: `claude`, `copilot`, `cursor`, `codex` |
 | `--packs core` | `init` | Choose packs |
 | `--force` | `init` | Start over when `bees.yaml` already exists |
+| `--check` | `sync`, `tokens` | Exit 1 when configs are stale (`sync`) or over budget (`tokens`). For CI |
+| `--json` | `tokens` | Machine-readable output |
 | `-C <dir>` | all | Run as if started in `<dir>` |
 
 Mistype a command or a pack and bees suggests the closest match (`bees snyc` → *Did you mean `bees sync`?*). For a stack trace on an unexpected error, set `BEES_DEBUG=1`.
@@ -139,7 +142,7 @@ Mistype a command or a pack and bees suggests the closest match (`bees snyc` →
 | Pack | What you get | Status |
 |---|---|:-:|
 | 🐝 **core** | Shared `AGENTS.md` conventions, `project-context` skill, `/onboard` command, permission rules that block reading `.env` and `secrets/` | ✅ |
-| 👥 **team** | A named crew of agents (see [the hive](#-meet-the-hive)) that draft issues and reviews for a human to approve | 🚧 |
+| 👥 **team** | Nine named agents ([meet the hive](#-meet-the-hive)), `/hive`, `/drafts` and `/post` commands, and the `drafts` skill: agents draft, a human posts | ✅ |
 | 🐘🐟 **memory** | Elephant (long-term team memory in git) + Goldfish (short-term session notes) | 🚧 |
 | 📐 **spec** | Spec-driven development with [GitHub Spec Kit](https://github.com/github/spec-kit), pinned | 🚧 |
 | 🛡️ **security** | Secure-coding and STRIDE threat-model skills, dependency audit, secret-blocking hook | 🚧 |
@@ -185,7 +188,20 @@ tools: [claude, copilot, cursor, codex]
 packs: [core]
 ```
 
-🚧 The `team:` key (rename agents, set token budgets) and `overrides:` key (for example extra `block-paths` for the security pack) arrive with their packs.
+Optional keys:
+
+```yaml
+team:                    # with the team pack: rename agents or switch them off
+  reviewer: { name: Ken }
+  designer: false
+tokens:                  # budgets checked by `bees tokens` and `bees doctor` (defaults shown)
+  always-loaded: 3000    # per tool, paid on every request
+  skill: 2000
+  agent: 1500
+  command: 1000
+```
+
+🚧 An `overrides:` key (for example extra `block-paths` for the security pack) arrives with its pack.
 
 ### Your edits are safe
 
@@ -216,26 +232,70 @@ npm run test:real -- ../your-project      # or a git URL
 
 This runs bees against a disposable copy and prints a checklist. Your project is never modified. See **[docs/testing.md](docs/testing.md)**.
 
-## 🔭 What's coming
+## 👥 Meet the hive
 
-### 👥 Meet the hive
-
-The **team** pack ships a crew of specialised agents. Each has a name and a role, and writes issues, reviews and PR comments the way a human teammate would: clear, friendly, to the point.
+`bees add team` gives every tool a crew of specialised agents. Each has a name and a role, and writes issues, reviews and PR comments the way a human teammate would: clear, friendly, to the point. In Claude Code and Copilot they are real sub-agents; in Cursor and Codex they are roles listed in `AGENTS.md`.
 
 | | Agent | Role | Typical work |
 |---|---|---|---|
 | 👑 | **Maya** | Tech Lead | Breaks work into tasks, routes them to the right agent, final go/no-go |
 | 🏛️ | **Omar** | Architect | System design, ADRs, trade-off analysis |
 | 🛠️ | **Sam** | Developer | Implements features test-first |
-| 🎨 | **Lina** | Designer | UI/UX with Impeccable, design tokens, accessibility |
+| 🎨 | **Lina** | Designer | UI/UX, design tokens, accessibility |
 | 🔍 | **Kenji** | Reviewer | Code review with actionable, kind comments |
 | 🛡️ | **Aisha** | Security Engineer | Threat models, secure-coding review, dependency audit |
 | 🧪 | **Leo** | QA Engineer | Test plans, edge cases, regression checks |
 | ✍️ | **Nora** | Writer | Issues, PR descriptions, docs, changelogs |
-| 🪙 | **Theo** | Token Optimizer | Context budgets, model routing, memory compaction |
+| 🪙 | **Theo** | Token Optimizer | Reads `bees tokens`, proposes cuts, model routing, note compaction |
+
+| Command | What it does |
+|---|---|
+| `/hive <task>` | Maya plans the work: goal, size, risks, and ordered tasks with an owner each. She waits for your OK |
+| `/drafts` | List agent drafts waiting in `.bees/drafts/` |
+| `/post <draft>` | Publish one draft to GitHub with `gh`. Running it *is* your approval |
+
+Rename an agent or switch one off in `bees.yaml` (`team: { reviewer: { name: Ken }, designer: false }`), then run `bees sync`. Every mention of them across the pack follows.
 
 > [!NOTE]
-> **Humans stay in control.** Agents *draft* issues and comments into `.bees/drafts/`; nothing is posted to GitHub until a human approves. Every post ends with a signature such as `— Maya, Tech Lead · bees agent 🐝`, so readers always know an agent wrote it.
+> **Humans stay in control.** Agents *draft* issues, comments, reviews and PR descriptions into `.bees/drafts/` (gitignored); nothing reaches GitHub until a human runs `/post`. Every post ends with a signature such as `— Maya, Tech Lead · bees agent 🐝`, so readers always know an agent wrote it. Agents never merge.
+
+## 🪙 Token budgets
+
+Every rule, agent description and skill list your tools load costs tokens on **every request**. `bees tokens` shows that cost per tool, what loads only on demand, and what to cut:
+
+```text
+🪙 Token budget · orders-api   estimates, ~4 characters per token
+
+Always loaded (paid on every request · budget 3,000 per tool)
+  Claude Code     ███████████████░░░░░░░░░   1,926   64%  ✔
+  GitHub Copilot  ██████████████░░░░░░░░░░   1,803   60%  ✔
+  Cursor          ███████████░░░░░░░░░░░░░   1,369   46%  ✔
+  Codex           ███████████░░░░░░░░░░░░░   1,369   46%  ✔
+
+  What Claude Code loads
+    AGENTS.md (bees)                              1,246
+    9 agent descriptions                            358
+    2 skill descriptions                            123
+    4 command descriptions                          113
+    CLAUDE.md (bees)                                 69
+    CLAUDE.md (your text)                            17
+
+Loaded on demand (paid only when used)
+  skill    drafts           ██░░░░░░░░░░    361 / 2,000  ✔
+  agent    token-optimizer  ██░░░░░░░░░░    259 / 1,500  ✔
+  …
+
+Tips
+  • Ask the token-optimizer agent for a before/after review of the biggest parts.
+
+✔ Everything is within budget. 🍯
+```
+
+- It measures the files on disk, so your own text outside the bees markers counts too.
+- Set budgets under `tokens:` in `bees.yaml`. `bees doctor` warns when you're over; `bees tokens --check` fails CI; `bees tokens --json` feeds dashboards.
+- Counts are estimates (about 4 characters per token). Exact counts vary by model, but the estimate is good enough to compare and budget.
+
+## 🔭 What's coming
 
 ### 🐘 Elephant & 🐟 Goldfish: memory that scales
 
@@ -261,7 +321,9 @@ Give bees an issue and get back a reviewed, tested **draft pull request**. The h
 - [x] Tests: unit, end-to-end fixtures, real-project runner
 - [x] First alpha on npm: `bees-agentic@0.1.0-alpha.0`
 - [ ] Pack JSON schemas, user/local scopes ([ADR 0001](docs/adr/0001-install-scopes.md)), Claude Code plugin marketplace
-- [ ] Packs: team, memory
+- [x] Pack: team, with renames from `bees.yaml` and the draft → `/post` workflow
+- [x] `bees tokens`: token budget screen, `--check` for CI
+- [ ] Pack: memory
 - [ ] Packs: spec (Spec Kit), security, quality, testing, git-flow, docs, design (Impeccable)
 - [ ] Pack: factory ([ADR 0002](docs/adr/0002-software-factory.md))
 - [ ] **v0.1.0** stable release

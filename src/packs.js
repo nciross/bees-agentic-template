@@ -3,6 +3,8 @@
 //   skills/<name>/SKILL.md     → Agent Skills (plus any supporting files)
 //   commands/<name>.md         → slash commands / prompts
 //   agents/<name>.md           → sub-agents
+//   files/<path>               → copied to <path> in the project (a file named `gitignore`
+//                                becomes `.gitignore`, because npm drops .gitignore files)
 // pack.yaml may list `requires: [other-pack, ...]`: packs that must be enabled too.
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -68,6 +70,13 @@ export function loadPack(name, dir = packsDir()) {
           return { name: baseName(f), description: data.description ?? "", data, body: body.trim() };
         })
       : [];
+  const commands = loadDocs("commands");
+  const agents = loadDocs("agents");
+
+  const files = listFilesRecursive(join(root, "files")).map((rel) => ({
+    path: rel.replace(/(^|\/)gitignore$/, "$1.gitignore"),
+    content: readText(join(root, "files", rel)),
+  }));
 
   if (problems.length) throw new BeesError(`Pack "${name}" is invalid:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
 
@@ -80,8 +89,9 @@ export function loadPack(name, dir = packsDir()) {
     permissions: { deny: manifest.permissions?.deny ?? [] },
     rules,
     skills,
-    commands: loadDocs("commands"),
-    agents: loadDocs("agents"),
+    commands,
+    agents,
+    files,
   };
 }
 

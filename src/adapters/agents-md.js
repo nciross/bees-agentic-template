@@ -37,7 +37,10 @@ export function renderAgentsMd({ config, packs }) {
   const agents = packs.flatMap((p) => p.agents);
   if (agents.length && tools.some((t) => t === "cursor" || t === "codex")) {
     lines.push("", "## Roles", "", "When asked to act as one of these roles, follow its description:", "");
-    for (const a of agents) lines.push(`- **${a.name}**: ${a.description}`);
+    for (const a of agents) {
+      const who = a.persona ? `**${a.persona.name}** (${a.persona.role}, \`${a.name}\`)` : `**${a.name}**`;
+      lines.push(`- ${who}: ${a.description}`);
+    }
   }
   return lines.join("\n");
 }
