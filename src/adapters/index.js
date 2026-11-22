@@ -14,6 +14,8 @@ export const ADAPTERS = { claude, copilot, cursor, codex };
 export function renderAll(ctx) {
   const outputs = [{ path: "AGENTS.md", region: renderAgentsMd(ctx) }];
   for (const tool of ctx.config.tools) outputs.push(...ADAPTERS[tool](ctx));
+  // Plain files a pack ships for the project itself, whatever the tools.
+  for (const pack of ctx.packs) for (const f of pack.files ?? []) outputs.push({ path: f.path, content: f.content });
 
   const seen = new Map();
   const merged = [];

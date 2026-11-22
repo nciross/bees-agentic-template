@@ -7,6 +7,8 @@ import { detectProject, detectTools } from "./detect.js";
 import { findRegion } from "./markers.js";
 import { dependentsOf, listPacks, loadPack, loadPacks, missingRequires, resolveRequires } from "./packs.js";
 import { applyPlan, computePlan } from "./sync.js";
+import { applyTeam } from "./team.js";
+import { measureTokens, tokenTips } from "./tokens.js";
 import { askList, banner, c, isInteractive, log, printChanges } from "./ui.js";
 import { BeesError, isDir, readText, writeText } from "./util.js";
 
@@ -55,8 +57,18 @@ const COMMANDS = {
     usage: "bees list",
     examples: ["bees list"],
   },
+  tokens: {
+    summary: "Show the token cost of your agent setup per tool, against your budgets",
+    usage: "bees tokens [--check] [--json]",
+    options: [
+      ["--check", "Exit 1 when anything is over budget (use in CI)"],
+      ["--json", "Print the measurement as JSON"],
+    ],
+    notes: "Set budgets in bees.yaml under `tokens:` (always-loaded, skill, agent, command). Counts are estimates (~4 characters per token).",
+    examples: ["bees tokens", "bees tokens --check"],
+  },
   doctor: {
-    summary: "Check Node.js, bees.yaml, bees.lock, markers and drift",
+    summary: "Check Node.js, bees.yaml, bees.lock, markers, drift and token budgets",
     usage: "bees doctor",
     examples: ["bees doctor"],
   },
@@ -127,6 +139,7 @@ const OPTIONS = {
   force: { type: "boolean" },
   check: { type: "boolean" },
   "dry-run": { type: "boolean" },
+  json: { type: "boolean" },
   help: { type: "boolean", short: "h" },
   version: { type: "boolean", short: "v" },
 };
@@ -147,7 +160,8 @@ function loadProject(cwd, packsOverride) {
       { hint: `Run \`bees add ${all.join(" ")}\`.` },
     );
   }
-  return { config, warnings, packs };
+  const hive = applyTeam(packs, config.team);
+  return { config, warnings: [...warnings, ...hive.warnings], packs: hive.packs, roster: hive.roster };
 }
 
 /** Run a sync and report it. Returns the exit code. */
@@ -210,7 +224,7 @@ async function cmdInit(cwd, opts) {
 
   if (opts["dry-run"]) {
     const preview = validateConfig(YAML.parse(renderConfig({ project, tools, packs })), available).config;
-    const plan = computePlan(cwd, { config: preview, packs: loadPacks(packs) });
+    const plan = computePlan(cwd, { config: preview, packs: applyTeam(loadPacks(packs), preview.team).packs });
     printChanges([{ action: existsSync(join(cwd, CONFIG_FILE)) ? "update" : "create", path: CONFIG_FILE }, ...plan.changes], { prefix: "  " });
     log.info(c.dim(`  Dry run: ${plan.changes.length + 1} change(s) not written.`));
     return 0;
@@ -288,6 +302,63 @@ function cmdList(cwd) {
   return 0;
 }
 
+const fmt = (n) => n.toLocaleString("en-US");
+
+function bar(value, max, width = 24) {
+  const ratio = max > 0 ? value / max : 0;
+  const filled = Math.min(width, Math.round(Math.min(ratio, 1) * width));
+  const paintBar = ratio > 1 ? c.red : ratio > 0.8 ? c.yellow : c.green;
+  return paintBar("█".repeat(filled)) + c.dim("░".repeat(width - filled));
+}
+
+const status = (value, max) => (value > max ? c.red("✖ over") : value > max * 0.8 ? c.yellow("⚠ near") : c.green("✔"));
+
+/** The token screen: always-loaded cost per tool, on-demand items, tips. */
+function cmdTokens(cwd, opts) {
+  const project = loadProject(cwd);
+  const report = measureTokens(cwd, { ...project, budgets: project.config.budgets });
+  if (opts.json) {
+    log.info(JSON.stringify(report, null, 2));
+    return opts.check && report.over.length ? 1 : 0;
+  }
+
+  const name = project.config.project.name ?? "this project";
+  const labelWidth = Math.max(...report.tools.map((t) => t.label.length), 14);
+  log.info(`${c.honey("🪙 Token budget")} · ${c.bold(name)}   ${c.dim("estimates, ~4 characters per token")}`);
+
+  log.info(`\n${c.bold("Always loaded")} ${c.dim(`(paid on every request · budget ${fmt(report.budgets["always-loaded"])} per tool)`)}`);
+  for (const t of report.tools) {
+    const pct = Math.round((t.total / t.budget) * 100);
+    log.info(`  ${t.label.padEnd(labelWidth)}  ${bar(t.total, t.budget)}  ${fmt(t.total).padStart(6)}  ${String(pct).padStart(3)}%  ${status(t.total, t.budget)}`);
+  }
+
+  const heaviest = [...report.tools].sort((a, b) => b.total - a.total)[0];
+  if (heaviest?.parts.length) {
+    log.info(`\n  ${c.dim(`What ${heaviest.label} loads`)}`);
+    for (const p of heaviest.parts) log.info(`    ${p.label.padEnd(44)} ${fmt(p.tokens).padStart(6)}`);
+  }
+
+  if (report.items.length) {
+    log.info(`\n${c.bold("Loaded on demand")} ${c.dim("(paid only when used)")}`);
+    const width = Math.max(...report.items.map((i) => i.name.length));
+    for (const i of [...report.items].sort((a, b) => b.tokens / b.budget - a.tokens / a.budget)) {
+      log.info(`  ${i.kind.padEnd(8)} ${i.name.padEnd(width)}  ${bar(i.tokens, i.budget, 12)}  ${fmt(i.tokens).padStart(5)} / ${fmt(i.budget).padEnd(5)}  ${status(i.tokens, i.budget)}`);
+    }
+  }
+
+  const hasTokenOptimizer = project.packs.some((p) => p.agents.some((a) => a.name === "token-optimizer"));
+  log.info(`\n${c.bold("Tips")}`);
+  for (const tip of tokenTips(report, { hasTokenOptimizer })) log.info(`  • ${tip}`);
+  log.info("");
+  if (report.over.length) {
+    log.error(`${report.over.length} item(s) over budget: ${report.over.map((o) => o.what).join("; ")}.`);
+    log.info(c.dim("  Raise a budget under `tokens:` in bees.yaml, or trim the content."));
+    return opts.check ? 1 : 0;
+  }
+  log.ok("Everything is within budget. 🍯");
+  return 0;
+}
+
 function cmdDoctor(cwd) {
   let problems = 0;
   const fail = (m) => (problems++, log.error(m));
@@ -336,6 +407,11 @@ function cmdDoctor(cwd) {
     log.warn("Cursor has no sub-agents; pack agents are listed as roles in AGENTS.md instead.");
   }
 
+  // Budgets are advice, not a failure: `bees tokens --check` is the strict version.
+  const { over } = measureTokens(cwd, { ...project, budgets: project.config.budgets });
+  if (over.length) log.warn(`${over.length} item(s) over their token budget. Run \`bees tokens\` for details.`);
+  else log.ok("Within token budgets");
+
   if (problems) log.error(`${problems} problem(s) found.`);
   else log.ok("The hive is healthy. 🍯");
   return problems ? 1 : 0;
@@ -378,6 +454,8 @@ export async function main(argv = process.argv.slice(2)) {
         return cmdList(cwd);
       case "doctor":
         return cmdDoctor(cwd);
+      case "tokens":
+        return cmdTokens(cwd, opts);
       default:
         log.error(`Unknown command "${command}".`);
         {

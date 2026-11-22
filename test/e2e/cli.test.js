@@ -287,3 +287,53 @@ test("generated AGENTS.md has exactly one managed region", (t) => {
   assert.equal(text.split(BEGIN).length, 2);
   assert.equal(text.split(END).length, 2);
 });
+
+test("team pack: the hive for every tool, renames from bees.yaml, drafts stay local", (t) => {
+  const cwd = copyFixture(t, "node-express-app");
+  const init = bees(["init", "--yes", ALL, "--packs=team"], { cwd });
+  assert.equal(init.code, 0, init.out);
+  assert.match(init.out, /Also enabling core \(required by team\)/);
+  assert.match(read(cwd, ".claude/agents/reviewer.md"), /You are Kenji, the code reviewer/);
+  assert.ok(existsSync(join(cwd, ".github/agents/tech-lead.agent.md")));
+  assert.ok(existsSync(join(cwd, ".claude/commands/post.md")));
+  assert.match(read(cwd, ".bees/drafts/.gitignore"), /^\*$/m);
+  assert.match(read(cwd, "AGENTS.md"), /- \*\*Maya\*\* \(Tech Lead, `tech-lead`\)/);
+
+  write(cwd, "bees.yaml", read(cwd, "bees.yaml") + "team:\n  reviewer: { name: Ken }\n  designer: false\n");
+  const sync = bees(["sync"], { cwd });
+  assert.equal(sync.code, 0, sync.out);
+  assert.match(sync.out, /- \.claude\/agents\/designer\.md/);
+  assert.match(read(cwd, ".claude/agents/reviewer.md"), /You are Ken, the code reviewer/);
+  assert.match(read(cwd, ".claude/agents/tech-lead.md"), /UI to the designer/);
+  assert.equal(bees(["sync", "--check"], { cwd }).code, 0);
+
+  write(cwd, "bees.yaml", read(cwd, "bees.yaml").replace("name: Ken", "name: \"<script>\""));
+  const bad = bees(["sync"], { cwd });
+  assert.equal(bad.code, 1);
+  assert.match(bad.out, /team\.reviewer\.name must be a short name/);
+});
+
+test("bees tokens: budget screen, --json, --check and doctor warning", (t) => {
+  const cwd = copyFixture(t, "node-express-app");
+  bees(["init", "--yes", "--tools=claude,codex", "--packs=team"], { cwd });
+
+  const screen = bees(["tokens"], { cwd });
+  assert.equal(screen.code, 0, screen.out);
+  assert.match(screen.out, /Token budget · orders-api/);
+  assert.match(screen.out, /Claude Code .*█.* ✔/);
+  assert.match(screen.out, /agent\s+reviewer/);
+  assert.match(screen.out, /Everything is within budget/);
+
+  const json = JSON.parse(bees(["tokens", "--json"], { cwd }).stdout);
+  assert.deepEqual(json.tools.map((x) => x.tool), ["claude", "codex"]);
+  assert.equal(json.budgets["always-loaded"], 3000);
+
+  write(cwd, "bees.yaml", read(cwd, "bees.yaml") + "tokens:\n  always-loaded: 500\n");
+  const over = bees(["tokens"], { cwd });
+  assert.equal(over.code, 0, "plain run reports but does not fail");
+  assert.match(over.out, /over budget: Claude Code: always-loaded context/);
+  assert.equal(bees(["tokens", "--check"], { cwd }).code, 1);
+  const doctor = bees(["doctor"], { cwd });
+  assert.equal(doctor.code, 0, "budgets are advice in doctor");
+  assert.match(doctor.out, /over their token budget/);
+});

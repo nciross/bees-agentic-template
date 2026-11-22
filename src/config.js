@@ -1,5 +1,7 @@
 import { join } from "node:path";
 import YAML from "yaml";
+import { validateTeam } from "./team.js";
+import { validateBudgets } from "./budgets.js";
 import { BeesError, readText, writeText } from "./util.js";
 
 export const CONFIG_FILE = "bees.yaml";
@@ -51,10 +53,16 @@ export function validateConfig(raw, availablePacks) {
     commands,
   };
 
-  const known = new Set(["version", "project", "tools", "packs", "team", "overrides"]);
+  const teamResult = validateTeam(raw.team);
+  errors.push(...teamResult.errors);
+  const tokenResult = validateBudgets(raw.tokens);
+  errors.push(...tokenResult.errors);
+  warnings.push(...tokenResult.warnings);
+
+  const known = new Set(["version", "project", "tools", "packs", "team", "tokens", "overrides"]);
   for (const k of Object.keys(raw)) if (!known.has(k)) warnings.push(`Unknown key \`${k}\` in ${CONFIG_FILE} is ignored.`);
 
-  return { config: { version: 1, project, tools: TOOLS.filter((t) => tools.includes(t)), packs }, errors, warnings };
+  return { config: { version: 1, project, tools: TOOLS.filter((t) => tools.includes(t)), packs, team: teamResult.team, budgets: tokenResult.budgets }, errors, warnings };
 }
 
 export function readConfigDocument(cwd) {
