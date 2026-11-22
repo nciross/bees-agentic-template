@@ -6,84 +6,151 @@
 
 <h3>One hive, every agent.</h3>
 
-**A reusable, team-shareable agentic dev environment — install it into any existing project and every teammate gets the same skills, agents, rules and guardrails, whatever AI tool they use.**
+**Give every teammate the same AI setup (skills, agents, rules and guardrails) in Claude Code, GitHub Copilot, Cursor and Codex, from one committed file.**
 
 [![CI](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml/badge.svg)](https://github.com/nciross/bees-agentic-template/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/bees-agentic?label=npm&color=cb3837)](https://www.npmjs.com/package/bees-agentic)
+[![npm](https://img.shields.io/npm/v/bees-agentic/alpha?label=npm%40alpha&color=cb3837)](https://www.npmjs.com/package/bees-agentic)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#-contributing)
-[![Status: early preview](https://img.shields.io/badge/status-early%20preview-orange.svg)](#-roadmap)
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-supported-d97757)
 ![GitHub Copilot](https://img.shields.io/badge/Copilot-supported-24292f)
 ![Cursor](https://img.shields.io/badge/Cursor-supported-000000)
 ![Codex](https://img.shields.io/badge/Codex-supported-10a37f)
 
-[Why bees](#-why-bees) · [How it works](#-how-it-works) · [Packs](#-packs) · [Memory](#-elephant---goldfish--memory-that-scales) · [The hive](#-meet-the-hive) · [Quick start](#-quick-start) · [Team sharing](#-share-it-with-your-team) · [Roadmap](#-roadmap)
+[Quick start](#-quick-start) · [Why bees](#-why-bees) · [Commands](#-commands) · [Packs](#-packs) · [Configuration](#%EF%B8%8F-configuration) · [Team & CI](#-share-it-with-your-team) · [What's coming](#-whats-coming) · [Roadmap](#-roadmap)
 
 </div>
 
 > [!NOTE]
-> **bees is in early preview.** The CLI (`init`, `sync`, `add`, `remove`, `doctor`) and the `core` pack work today for all four tools; the other packs land pull request by pull request — see the [roadmap](#-roadmap).
+> **Early preview (`0.1.0-alpha`).** The CLI and the `core` pack work today in all four tools. The other packs (team agents, memory, Spec Kit, security, the software factory) are being built one pull request at a time. Each section below says whether a feature is ✅ available now or 🚧 planned.
 
 ---
 
+## 🚀 Quick start
+
+You need **Node.js 22+**. Your project can be in any language.
+
+```bash
+cd your-project
+npx bees-agentic@alpha init     # detects your stack, asks which tools and packs
+git status                      # review what bees generated
+git add -A && git commit -m "chore: add bees agentic dev environment"
+```
+
+Not sure yet? Preview first. `--dry-run` lists every file bees would create or change and writes nothing:
+
+```bash
+npx bees-agentic@alpha init --dry-run
+```
+
+> [!WARNING]
+> The npm package is **`bees-agentic`**. The name `bees` on npm belongs to an unrelated project, so never run `npx bees`. Once bees is installed, the command is `bees`.
+
+For a permanent `bees` command, run `npm install -g bees-agentic@alpha`. Every install option (global, dev dependency, from source, CI) is in **[docs/install.md](docs/install.md)**.
+
+### What you get
+
+For a Node/TypeScript project with all four tools selected, `bees init` writes:
+
+```text
+bees.yaml                                 ← your config: commit it
+bees.lock                                 ← hashes of generated files
+AGENTS.md                                 ← shared rules every tool reads (managed region)
+CLAUDE.md                                 ← imports AGENTS.md; your own text is kept
+.claude/settings.json                     ← permission rules merged in, your settings kept
+.claude/skills/project-context/SKILL.md
+.claude/commands/onboard.md               ← /onboard
+.github/copilot-instructions.md
+.github/skills/project-context/SKILL.md
+.github/prompts/onboard.prompt.md
+.cursor/rules/bees-project-context.mdc
+.cursor/skills/project-context/SKILL.md
+.cursor/commands/onboard.md
+.agents/skills/project-context/SKILL.md   ← Codex
+```
+
+Then, in any of the tools, ask for **`/onboard`** to get a tour of the codebase.
+
 ## 🍯 Why bees?
 
-Every developer on a team ends up hand-tuning their own AI setup: a different `CLAUDE.md`, a few copied Cursor rules, a half-maintained Copilot prompt folder. The result is a **swarm without a hive** — inconsistent code, duplicated effort, and security rules that only some agents follow.
+Every developer on a team ends up hand-tuning their own AI setup: a different `CLAUDE.md`, a few copied Cursor rules, a half-maintained Copilot prompt folder. The result is a **swarm without a hive**: inconsistent code, duplicated effort, and security rules that only some agents follow.
 
-**bees** fixes that:
+- 🏠 **One source of truth.** Skills, agents, commands and rules are written once, as portable [Agent Skills](https://agentskills.io) (`SKILL.md`) plus a small `pack.yaml`.
+- 🔌 **Drop-in for existing projects.** `bees init` detects your stack and commands. No rewrite, no new framework.
+- 🤝 **Every tool, same behaviour.** bees generates each tool's native config, plus a shared `AGENTS.md`.
+- 👥 **Team-shareable.** Commit `bees.yaml`, and every teammate gets the same setup.
+- ♻️ **Safe re-syncs.** bees only rewrites text between `<!-- bees:begin -->` and `<!-- bees:end -->`, and tracks the files it owns in `bees.lock`. Your own edits stay.
+- 🛑 **Never stale.** `bees sync --check` in CI fails when someone forgets to re-sync.
 
-- 🏠 **One source of truth** — skills, agents, commands, rules and hooks are written once, as portable [Agent Skills](https://agentskills.io) (`SKILL.md`) plus a small `pack.yaml`.
-- 🔌 **Drop-in for existing projects** — `bees init` detects your stack and wires everything in. No rewrite, no new framework.
-- 🤝 **Every tool, same behaviour** — native configs are generated for **Claude Code, GitHub Copilot, Cursor and Codex**, plus a shared `AGENTS.md`.
-- 👥 **Team-shareable by default** — commit `bees.yaml`; teammates are prompted to install the same setup automatically.
-- 📌 **Upstream, pinned** — best-in-class community packs (Impeccable, GitHub Spec Kit, security skills) are installed from their official sources at pinned versions — never copied, never drifting.
-- ♻️ **Safe re-syncs** — bees only touches content between `<!-- bees:begin -->` / `<!-- bees:end -->` markers. Your own edits are preserved.
-
-## 🧭 How it works
+### How it works
 
 ```mermaid
 flowchart LR
-    subgraph Hive["🐝 bees (this repo)"]
+    subgraph Hive["🐝 bees packs"]
         P1[core]:::pack
-        P2[design]:::pack
-        P3[spec]:::pack
-        P4[security]:::pack
-        P5[quality · testing · git-flow · docs]:::pack
+        P2[team · memory · spec · security · …]:::planned
     end
 
     CFG["bees.yaml<br/>(committed in your project)"] --> CLI
     Hive --> CLI(("bees CLI<br/>init · sync · doctor"))
 
-    CLI --> A1["Claude Code<br/>.claude/ · CLAUDE.md"]
-    CLI --> A2["Copilot<br/>.github/copilot-instructions.md<br/>.github/prompts/"]
-    CLI --> A3["Cursor<br/>.cursor/rules/*.mdc"]
-    CLI --> A4["Codex<br/>AGENTS.md · skills"]
-    CLI --> UP["Upstream installers<br/>Impeccable · Spec Kit"]
+    CLI --> A1["Claude Code<br/>CLAUDE.md · .claude/"]
+    CLI --> A2["Copilot<br/>.github/"]
+    CLI --> A3["Cursor<br/>.cursor/"]
+    CLI --> A4["Codex<br/>AGENTS.md · .agents/"]
 
     classDef pack fill:#ffd43b,stroke:#e8a400,color:#1a1a1a
+    classDef planned fill:#fff3bf,stroke:#e8a400,color:#1a1a1a,stroke-dasharray: 4 3
 ```
 
-1. **Packs** live in this repo: each one is a folder of `SKILL.md` skills, agents, commands, rules and hooks, described by a `pack.yaml`.
-2. **Your project** declares which tools and packs it wants in `bees.yaml`.
-3. **The bees CLI** renders every pack through a per-tool **adapter** and calls official upstream installers for third-party packs.
-4. **CI** runs `bees sync --check` so generated configs never go stale.
+1. **Packs** are folders of skills, agents, commands and rules, described by a `pack.yaml`. A pack can `require` other packs.
+2. **Your project** lists the tools and packs it wants in `bees.yaml`.
+3. **The CLI** renders every pack through a per-tool **adapter** into that tool's native files.
+4. **CI** runs `bees sync --check` so the generated files always match `bees.yaml`.
+
+## 🧰 Commands
+
+| Command | What it does |
+|---|---|
+| `bees init` | Detect the stack, pick tools and packs, write `bees.yaml`, generate configs |
+| `bees sync` | Re-generate configs from `bees.yaml`. Safe to run any time; your own edits are kept |
+| `bees sync --check` | Write nothing; exit 1 if generated configs are stale. Use it in CI |
+| `bees add <pack...>` | Enable packs, plus any packs they require, then sync |
+| `bees remove <pack...>` | Disable packs and delete the files they generated. Refuses while another pack needs them |
+| `bees list` | List available packs (● = enabled here) |
+| `bees doctor` | Check Node.js, `bees.yaml`, `bees.lock`, markers and drift |
+| `bees help <command>` | Options and examples for one command (same as `bees <command> --help`) |
+
+Handy options:
+
+| Option | Works with | Effect |
+|---|---|---|
+| `--dry-run` | `init`, `sync`, `add`, `remove` | Show every file that would change, write nothing |
+| `-y, --yes` | `init` | No prompts: use the detected tools and the `core` pack |
+| `--tools claude,copilot` | `init` | Choose tools: `claude`, `copilot`, `cursor`, `codex` |
+| `--packs core` | `init` | Choose packs |
+| `--force` | `init` | Start over when `bees.yaml` already exists |
+| `-C <dir>` | all | Run as if started in `<dir>` |
+
+Mistype a command or a pack and bees suggests the closest match (`bees snyc` → *Did you mean `bees sync`?*). For a stack trace on an unexpected error, set `BEES_DEBUG=1`.
 
 ## 🧩 Packs
 
-| Pack | What you get | Source |
-|---|---|---|
-| 🐝 **core** | Shared `AGENTS.md` conventions, project-context skill, sane permissions | bees |
-| 🎨 **design** | Frontend design fluency, anti-generic-UI guidance, design-token rules | [Impeccable](https://github.com/pbakaus/impeccable) (pinned) + bees glue |
-| 📐 **spec** | Spec-driven development: constitution → spec → plan → tasks → implement | [GitHub Spec Kit](https://github.com/github/spec-kit) (pinned) + bees glue |
-| 🛡️ **security** | Secure-coding & threat-model (STRIDE) skills, dependency audit, secret-blocking hook, `/security-review` | bees + optional pinned upstream security skills |
-| ✅ **quality** | Code-review agent, `/review` command, lint/format after every edit | bees |
-| 🧪 **testing** | Test-writer agent, TDD workflow skill | bees |
-| 🌿 **git-flow** | GitHub flow commands: branch → conventional commit → PR | bees |
-| 📚 **docs** | README, ADR and changelog skills | bees |
-| 🐘🐟 **memory** | Elephant (long-term team memory in git) + Goldfish (short-term session memory, summarized then forgotten) | bees |
-| 👥 **team** | A named crew of agents — tech lead, architect, developer, designer, reviewer, security, QA, writer, token optimizer | bees |
-| 🏭 **factory** | Software factory: issue → spec → plan → tasks → build → verify → draft PR, run by the hive with human approval gates ([ADR 0002](docs/adr/0002-software-factory.md)) | bees |
+| Pack | What you get | Status |
+|---|---|:-:|
+| 🐝 **core** | Shared `AGENTS.md` conventions, `project-context` skill, `/onboard` command, permission rules that block reading `.env` and `secrets/` | ✅ |
+| 👥 **team** | A named crew of agents (see [the hive](#-meet-the-hive)) that draft issues and reviews for a human to approve | 🚧 |
+| 🐘🐟 **memory** | Elephant (long-term team memory in git) + Goldfish (short-term session notes) | 🚧 |
+| 📐 **spec** | Spec-driven development with [GitHub Spec Kit](https://github.com/github/spec-kit), pinned | 🚧 |
+| 🛡️ **security** | Secure-coding and STRIDE threat-model skills, dependency audit, secret-blocking hook | 🚧 |
+| ✅ **quality** | Code-review agent, `/review`, lint/format after edits | 🚧 |
+| 🧪 **testing** | Test-writer agent, TDD workflow skill | 🚧 |
+| 🌿 **git-flow** | Branch → conventional commit → PR commands | 🚧 |
+| 📚 **docs** | README, ADR and changelog skills | 🚧 |
+| 🎨 **design** | Frontend design guidance with [Impeccable](https://github.com/pbakaus/impeccable), pinned | 🚧 |
+| 🏭 **factory** | Software factory: issue → spec → plan → build → verify → draft PR, with human approval gates ([ADR 0002](docs/adr/0002-software-factory.md)) | 🚧 |
+
+Third-party packs (Spec Kit, Impeccable) will be installed from their official sources at pinned versions, never copied.
 
 ### Supported tools
 
@@ -91,29 +158,69 @@ flowchart LR
 |---|:-:|:-:|:-:|:-:|
 | Shared rules (`AGENTS.md`) | ✅ | ✅ | ✅ | ✅ |
 | Skills (`SKILL.md`) | ✅ | ✅ | ✅ | ✅ |
-| Commands / prompts | ✅ | ✅ | ✅ | ✅ |
+| Commands / prompts | ✅ | ✅ | ✅ | ➖ |
 | Sub-agents | ✅ | ✅ | ➖ | ➖ |
-| Hooks (guardrails) | ✅ | ➖ | ✅ | ➖ |
-| Plugin marketplace | ✅ | ➖ | ➖ | ➖ |
+| Permission rules | ✅ | ➖ | ➖ | ➖ |
 
-<sub>✅ native · ➖ not available in the tool; bees falls back to rules in `AGENTS.md`.</sub>
+<sub>✅ native · ➖ not available in the tool; bees falls back to rules in `AGENTS.md`, and `bees doctor` tells you.</sub>
 
-## 🐘 Elephant & 🐟 Goldfish — memory that scales
+## ⚙️ Configuration
 
-Agents forget everything between sessions — or remember too much and burn tokens. bees splits memory in two:
+This is what `bees init` wrote for the Node project above. Edit it, then run `bees sync`:
 
-| | 🐘 **Elephant** — never forgets | 🐟 **Goldfish** — forgets on purpose |
-|---|---|---|
-| **What** | Decisions, conventions, lessons learned, glossary | What happened in *this* session |
-| **Where** | `.bees/memory/` — committed, reviewed, shared with the whole team | `.bees/goldfish/` — gitignored, local |
-| **Lifetime** | Forever (until compacted) | One session → a short handoff note |
-| **Token cost** | Only a tiny index is always loaded; entries are pulled on demand | Near zero — summarized, then dropped |
+```yaml
+# bees.yaml — commit this file
+version: 1
+project:
+  name: orders-api
+  stack: [Node.js, TypeScript, Express]
+  packageManager: pnpm
+  commands:          # shown to every agent in AGENTS.md; fix them if detection got one wrong
+    install: pnpm install
+    dev: pnpm run dev
+    build: pnpm run build
+    test: pnpm run test
+    lint: pnpm run lint
+tools: [claude, copilot, cursor, codex]
+packs: [core]
+```
 
-A goldfish note that keeps coming back gets **promoted** to elephant memory through a normal pull request — so knowledge grows with review, not by accident.
+🚧 The `team:` key (rename agents, set token budgets) and `overrides:` key (for example extra `block-paths` for the security pack) arrive with their packs.
 
-## 👥 Meet the hive
+### Your edits are safe
 
-bees ships a crew of specialised agents. Each has a name and a role, and writes issues, reviews and PR comments **like a human teammate would** — clear, friendly, to the point.
+- **Managed regions** (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`): bees only rewrites the text between the bees markers. Write your own notes above or below them.
+- **Owned files** (skills, commands, agents, rules) are fully generated and tracked by hash in `bees.lock`. Don't edit them: change the pack, or write your own file next to them.
+- **`.claude/settings.json`**: bees merges its permission rules in and keeps everything else.
+
+## 👥 Share it with your team
+
+1. One person runs `bees init` and opens a pull request with `bees.yaml`, `bees.lock` and the generated files.
+2. After merge, every teammate gets the same setup in whichever tool they use. Nothing to install for day-to-day use.
+3. Add one step to CI so the generated files never drift from `bees.yaml`:
+
+```yaml
+# .github/workflows/ci.yml
+- uses: actions/setup-node@v4
+  with:
+    node-version: 22
+- run: npx --yes bees-agentic@alpha sync --check
+```
+
+### Try it on a copy of your project first
+
+```bash
+git clone https://github.com/nciross/bees-agentic-template && cd bees-agentic-template && npm install
+npm run test:real -- ../your-project      # or a git URL
+```
+
+This runs bees against a disposable copy and prints a checklist. Your project is never modified. See **[docs/testing.md](docs/testing.md)**.
+
+## 🔭 What's coming
+
+### 👥 Meet the hive
+
+The **team** pack ships a crew of specialised agents. Each has a name and a role, and writes issues, reviews and PR comments the way a human teammate would: clear, friendly, to the point.
 
 | | Agent | Role | Typical work |
 |---|---|---|---|
@@ -127,131 +234,47 @@ bees ships a crew of specialised agents. Each has a name and a role, and writes 
 | ✍️ | **Nora** | Writer | Issues, PR descriptions, docs, changelogs |
 | 🪙 | **Theo** | Token Optimizer | Context budgets, model routing, memory compaction |
 
-Rename them, drop some, or add your own in `bees.yaml`.
-
 > [!NOTE]
-> **Humans stay in control.** Agents *draft* issues and comments into `.bees/drafts/`; nothing is posted to GitHub until a human approves. Every post ends with a small signature — `— Maya, Tech Lead · bees agent 🐝` — so readers always know an agent wrote it.
+> **Humans stay in control.** Agents *draft* issues and comments into `.bees/drafts/`; nothing is posted to GitHub until a human approves. Every post ends with a signature such as `— Maya, Tech Lead · bees agent 🐝`, so readers always know an agent wrote it.
 
-## 🚀 Quick start
+### 🐘 Elephant & 🐟 Goldfish: memory that scales
 
-Requires **Node.js 22+**. Your project can be in any language.
+| | 🐘 **Elephant**: never forgets | 🐟 **Goldfish**: forgets on purpose |
+|---|---|---|
+| **What** | Decisions, conventions, lessons learned, glossary | What happened in *this* session |
+| **Where** | `.bees/memory/`, committed and reviewed | `.bees/goldfish/`, gitignored |
+| **Lifetime** | Forever (until compacted) | One session → a short handoff note |
+| **Token cost** | A tiny index is always loaded; entries are pulled on demand | Near zero: summarized, then dropped |
 
-### Option A: any tool, with the CLI
+A goldfish note that keeps coming back gets **promoted** to elephant memory through a normal pull request, so team knowledge grows with review, not by accident.
 
-```bash
-cd your-existing-project
-npx github:nciross/bees-agentic-template init   # pick tools + packs interactively
-git status                                      # review what bees generated
-git add -A && git commit -m "chore: add bees agentic dev environment"
-```
+### 🏭 The software factory
 
-Prefer a permanent `bees` command? `npm install -g github:nciross/bees-agentic-template`. Every install option (global, dev dependency, from source, CI) is in **[docs/install.md](docs/install.md)**.
-
-> [!WARNING]
-> The npm package is `bees-agentic`, not `bees` (that name belongs to an unrelated package). Never run `npx bees`.
-
-### Option B: Claude Code only, as a plugin marketplace
-
-> Coming with the plugin marketplace milestone (see the [roadmap](#-roadmap)).
-
-```text
-/plugin marketplace add nciross/bees-agentic-template
-/plugin install bees-security@bees
-```
-
-### Everyday commands
-
-| Command | What it does |
-|---|---|
-| `bees init` | Detect stack, choose tools & packs, write `bees.yaml`, generate configs |
-| `bees sync` | Re-generate configs (idempotent, preserves your edits) |
-| `bees sync --check` | Fail if configs are stale — use it in CI |
-| `bees add <pack>` / `bees remove <pack>` | Enable or disable a pack |
-| `bees list` | List available packs |
-| `bees doctor` | Diagnose drift and broken markers |
-| `bees update` | Bump pinned upstream versions *(coming with upstream packs)* |
-
-### Test it on your project first
-
-Not ready to touch your repo? Run bees against a disposable copy and get a checklist of what works:
-
-```bash
-git clone https://github.com/nciross/bees-agentic-template && cd bees-agentic-template && npm install
-npm run test:real -- ../your-project            # or a git URL
-```
-
-Your project is never modified. See **[docs/testing.md](docs/testing.md)** for the unit, end-to-end and real-project test suites.
-
-## ⚙️ Configuration
-
-The full target format is shown below; today only the `core` pack ships, and `team` / `overrides` are reserved for upcoming packs.
-
-```yaml
-# bees.yaml — committed to your project
-version: 1
-tools: [claude, copilot, cursor, codex]
-packs:
-  - core
-  - design      # Impeccable, pinned
-  - spec        # GitHub Spec Kit, pinned
-  - security
-  - quality
-  - testing
-  - git-flow
-  - docs
-  - memory      # 🐘 elephant + 🐟 goldfish
-  - team
-team:
-  tech-lead: { name: Maya }
-  designer:  { name: Lina }
-  writer:    { name: Nora, post: draft }   # draft → human approves → gh posts
-  token-optimizer:
-    name: Theo
-    budgets: { agents-md: 2000, skill: 1500 }   # tokens
-overrides:
-  security:
-    block-paths: [".env*", "secrets/**"]
-```
-
-## 👥 Share it with your team
-
-1. One person runs `bees init` and opens a PR.
-2. The PR adds `bees.yaml`, `bees.lock` and the generated configs.
-3. After merge, every teammate gets the same setup in whichever tool they use — Claude Code users are even prompted to install the bees plugins automatically via the committed `.claude/settings.json`.
-4. Need something project-specific? Write it **outside** the bees markers — `bees sync` will never overwrite it.
+Give bees an issue and get back a reviewed, tested **draft pull request**. The hive works through intake → spec → plan → tasks → build → verify → ship inside your own tool, with a human approving after the spec, after the plan and before anything is posted. bees never merges. The design is in **[ADR 0002](docs/adr/0002-software-factory.md)**.
 
 ## 📍 Roadmap
 
-- [x] Repository, README & MIT license
-- [x] Repo hygiene: contributing guide, security policy, templates, CI
-- [x] ADR 0001: install scopes (user · project · local)
-- [x] Pack format, `core` pack, `AGENTS.md` generation
-- [x] CLI core: `init`, `sync`, `--check`, `add`, `remove`, `doctor`
+- [x] CLI: `init`, `sync`, `--check`, `add`, `remove`, `list`, `doctor`, `--dry-run` previews
 - [x] Adapters: Claude Code, Copilot, Cursor, Codex
+- [x] `core` pack and `AGENTS.md` generation
+- [x] Pack dependencies (`requires:` in `pack.yaml`)
 - [x] Tests: unit, end-to-end fixtures, real-project runner
-- [ ] Pack JSON schemas, user/local scopes (ADR 0001), Claude Code plugin marketplace
-- [ ] Packs: design (Impeccable), spec (Spec Kit), security
-- [ ] Packs: quality, testing, git-flow, docs
-- [ ] Pack: memory — 🐘 elephant & 🐟 goldfish
-- [ ] Pack: team — named agents, draft → approve → post workflow
-- [ ] Pack: factory — 🏭 software factory pipeline ([ADR 0002](docs/adr/0002-software-factory.md))
 - [x] First alpha on npm: `bees-agentic@0.1.0-alpha.0`
-- [ ] **v0.1.0** release on npm as `bees-agentic`
+- [ ] Pack JSON schemas, user/local scopes ([ADR 0001](docs/adr/0001-install-scopes.md)), Claude Code plugin marketplace
+- [ ] Packs: team, memory
+- [ ] Packs: spec (Spec Kit), security, quality, testing, git-flow, docs, design (Impeccable)
+- [ ] Pack: factory ([ADR 0002](docs/adr/0002-software-factory.md))
+- [ ] **v0.1.0** stable release
 
 ## 🤝 Contributing
 
-bees uses **[GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)**:
+bees uses **[GitHub flow](https://docs.github.com/en/get-started/using-github/github-flow)**: branch from `main`, commit with [Conventional Commits](https://www.conventionalcommits.org/), open a pull request, and merge once CI passes. `main` is always releasable.
 
-1. Branch from `main` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
-2. Commit using [Conventional Commits](https://www.conventionalcommits.org/).
-3. Open a pull request — CI must pass before merge.
-4. `main` is always releasable.
-
-New pack ideas are very welcome — open a [new pack proposal](https://github.com/nciross/bees-agentic-template/issues/new?template=new_pack.yml). See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide and [docs/adr/](docs/adr/) for architecture decisions.
+New pack ideas are very welcome. Open a [new pack proposal](https://github.com/nciross/bees-agentic-template/issues/new?template=new_pack.yml). See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide, [docs/adr/](docs/adr/) for architecture decisions and [docs/releasing.md](docs/releasing.md) for releases.
 
 ## 🙏 Credits
 
-bees stands on the shoulders of great open-source work: [Impeccable](https://github.com/pbakaus/impeccable), [GitHub Spec Kit](https://github.com/github/spec-kit), and the [Agent Skills](https://agentskills.io) open standard. Third-party packs are installed from their upstream sources and remain under their own licenses.
+bees stands on the shoulders of great open-source work: [Impeccable](https://github.com/pbakaus/impeccable), [GitHub Spec Kit](https://github.com/github/spec-kit) and the [Agent Skills](https://agentskills.io) open standard. Third-party packs are installed from their upstream sources and remain under their own licenses.
 
 ## 📄 License
 

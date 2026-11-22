@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { CONFIG_FILE, LOCK_FILE, TOOLS, TOOL_LABELS, loadConfig, readConfigDocument, validateConfig, writeConfig } from "./config.js";
+import YAML from "yaml";
+import { CONFIG_FILE, LOCK_FILE, TOOLS, TOOL_LABELS, loadConfig, readConfigDocument, renderConfig, validateConfig, writeConfig } from "./config.js";
 import { detectProject, detectTools } from "./detect.js";
 import { findRegion } from "./markers.js";
 import { dependentsOf, listPacks, loadPack, loadPacks, missingRequires, resolveRequires } from "./packs.js";
@@ -11,31 +12,112 @@ import { BeesError, isDir, readText, writeText } from "./util.js";
 
 export const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 
-const HELP = `${c.honey("bees")} ${VERSION}: one hive, every agent.
+const DOCS = "https://github.com/nciross/bees-agentic-template";
 
-Usage: bees <command> [options]
+// One entry per command: drives `bees --help`, `bees help <command>` and `bees <command> --help`.
+const COMMANDS = {
+  init: {
+    summary: "Set bees up in this project: detect the stack, pick tools and packs, generate configs",
+    usage: "bees init [--tools <list>] [--packs <list>] [-y] [--force] [--dry-run]",
+    options: [
+      ["--tools <list>", `Comma-separated tools (${TOOLS.join(", ")}). Default: detected, else all`],
+      ["--packs <list>", "Comma-separated packs. Default: core. Required packs are added for you"],
+      ["-y, --yes", "Accept the detected defaults, no prompts"],
+      ["--force", "Overwrite an existing bees.yaml"],
+      ["--dry-run", "Show what would be generated, write nothing"],
+    ],
+    examples: ["bees init", "bees init -y --tools claude,copilot", "bees init --packs core --dry-run"],
+  },
+  sync: {
+    summary: "Re-generate configs from bees.yaml (idempotent, keeps your own edits)",
+    usage: "bees sync [--check] [--dry-run]",
+    options: [
+      ["--check", "Write nothing; exit 1 if generated configs are stale (use in CI)"],
+      ["--dry-run", "Show the changes without writing them"],
+    ],
+    examples: ["bees sync", "bees sync --check"],
+  },
+  add: {
+    summary: "Enable packs (and the packs they require), then sync",
+    usage: "bees add <pack...> [--dry-run]",
+    options: [["--dry-run", "Show the packs and files that would change"]],
+    examples: ["bees add core", "bees add team --dry-run"],
+  },
+  remove: {
+    summary: "Disable packs and delete the files they generated, then sync",
+    usage: "bees remove <pack...> [--dry-run]",
+    options: [["--dry-run", "Show the packs and files that would change"]],
+    notes: "Refuses while another enabled pack still requires one of them.",
+    examples: ["bees remove core"],
+  },
+  list: {
+    summary: "List available packs; ● marks the ones enabled here",
+    usage: "bees list",
+    examples: ["bees list"],
+  },
+  doctor: {
+    summary: "Check Node.js, bees.yaml, bees.lock, markers and drift",
+    usage: "bees doctor",
+    examples: ["bees doctor"],
+  },
+};
 
-Commands
-  init                 Detect the stack, pick tools and packs, write bees.yaml, generate configs
-  sync                 Re-generate configs from bees.yaml (idempotent, keeps your edits)
-  sync --check         Exit 1 if generated configs are stale (use in CI)
-  add <pack...>        Enable packs (and the packs they require) and sync
-  remove <pack...>     Disable packs and sync (removes the files they generated;
-                       refuses while another enabled pack requires them)
-  list                 List available packs
-  doctor               Diagnose config, drift and broken markers
+const GLOBAL_OPTIONS = [
+  ["-C, --cwd <dir>", "Run as if started in <dir>"],
+  ["-h, --help", "Show help (also: bees help <command>)"],
+  ["-v, --version", "Show the version"],
+];
 
-Options
-  -C, --cwd <dir>      Run as if started in <dir>
-      --tools <list>   init: comma-separated tools (${TOOLS.join(", ")})
-      --packs <list>   init: comma-separated packs (default: core)
-  -y, --yes            init: accept detected defaults, no prompts
-      --force          init: overwrite an existing bees.yaml
-      --dry-run        init/sync/add/remove: show changes without writing
-  -h, --help           Show this help
-  -v, --version        Show the version
+const table = (rows, width) => rows.map(([k, v]) => `  ${k.padEnd(width)}${v}`).join("\n");
 
-Docs: https://github.com/nciross/bees-agentic-template`;
+function mainHelp() {
+  const names = Object.keys(COMMANDS);
+  return `${c.honey("bees")} ${VERSION}: one hive, every agent.
+
+${c.bold("Usage")}  bees <command> [options]
+
+${c.bold("Commands")}
+${table(names.map((n) => [n, COMMANDS[n].summary]), 10)}
+
+${c.bold("Options")}
+${table(GLOBAL_OPTIONS, 18)}
+
+${c.bold("Get started")}
+  ${c.dim("$")} npx bees-agentic@alpha init     ${c.dim("# in your project")}
+  ${c.dim("$")} bees help init                  ${c.dim("# details for one command")}
+
+Docs: ${DOCS}`;
+}
+
+function commandHelp(name) {
+  const cmd = COMMANDS[name];
+  const parts = [`${c.bold(`bees ${name}`)}: ${cmd.summary}`, "", `${c.bold("Usage")}  ${cmd.usage}`];
+  if (cmd.options?.length) parts.push("", c.bold("Options"), table([...cmd.options, ...GLOBAL_OPTIONS.slice(0, 1)], 18));
+  if (cmd.notes) parts.push("", cmd.notes);
+  parts.push("", c.bold("Examples"), ...cmd.examples.map((e) => `  ${c.dim("$")} ${e}`));
+  return parts.join("\n");
+}
+
+/** Closest candidate within a small edit distance, for "did you mean" hints. */
+export function suggest(input, candidates) {
+  const dist = (a, b) => {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++)
+      for (let j = 1; j <= b.length; j++) {
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        // A swap of two neighbouring letters ("snyc") counts as one typo.
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    return d[a.length][b.length];
+  };
+  let best = null;
+  for (const cand of candidates) {
+    const score = dist(input, cand);
+    if (score <= Math.max(1, Math.floor(cand.length / 3)) && (!best || score < best.score)) best = { cand, score };
+  }
+  return best?.cand ?? null;
+}
 
 const OPTIONS = {
   cwd: { type: "string", short: "C" },
@@ -51,9 +133,11 @@ const OPTIONS = {
 
 const splitList = (s) => [...new Set(String(s).split(/[\s,]+/).filter(Boolean))];
 
-function loadProject(cwd) {
+/** Load bees.yaml and its packs. `packsOverride` previews a different pack list (dry runs). */
+function loadProject(cwd, packsOverride) {
   const available = listPacks();
   const { config, warnings } = loadConfig(cwd, available);
+  if (packsOverride) config.packs = packsOverride;
   const packs = loadPacks(config.packs);
   const missing = missingRequires(packs);
   if (missing.length) {
@@ -67,8 +151,8 @@ function loadProject(cwd) {
 }
 
 /** Run a sync and report it. Returns the exit code. */
-function runSync(cwd, { check = false, dryRun = false, quiet = false } = {}) {
-  const { config, warnings, packs } = loadProject(cwd);
+function runSync(cwd, { check = false, dryRun = false, quiet = false, packsOverride } = {}) {
+  const { config, warnings, packs } = loadProject(cwd, packsOverride);
   for (const w of warnings) log.warn(w);
   const plan = computePlan(cwd, { config, packs });
   for (const w of plan.warnings) log.warn(w);
@@ -125,7 +209,10 @@ async function cmdInit(cwd, opts) {
   log.step(`Packs: ${packs.join(", ") || "(none)"}`);
 
   if (opts["dry-run"]) {
-    log.info(c.dim(`Dry run: would write ${CONFIG_FILE} and generate configs.`));
+    const preview = validateConfig(YAML.parse(renderConfig({ project, tools, packs })), available).config;
+    const plan = computePlan(cwd, { config: preview, packs: loadPacks(packs) });
+    printChanges([{ action: existsSync(join(cwd, CONFIG_FILE)) ? "update" : "create", path: CONFIG_FILE }, ...plan.changes], { prefix: "  " });
+    log.info(c.dim(`  Dry run: ${plan.changes.length + 1} change(s) not written.`));
     return 0;
   }
   writeConfig(cwd, { project, tools, packs });
@@ -140,13 +227,20 @@ ${c.bold("Next steps")}
 }
 
 function editPacks(cwd, names, mode, opts) {
-  if (!names.length) throw new BeesError(`Usage: bees ${mode} <pack...>`);
   const available = listPacks();
+  if (!names.length) {
+    throw new BeesError(`Usage: bees ${mode} <pack...>`, { hint: `Available packs: ${available.join(", ")}. See \`bees list\`.` });
+  }
   const { file, doc } = readConfigDocument(cwd);
   const current = doc.toJS()?.packs ?? [];
   if (mode === "add") {
     const unknown = names.filter((n) => !available.includes(n));
-    if (unknown.length) throw new BeesError(`Unknown pack(s): ${unknown.join(", ")}.`, { hint: `Available: ${available.join(", ")}` });
+    if (unknown.length) {
+      const guesses = unknown.map((n) => suggest(n, available)).filter(Boolean);
+      throw new BeesError(`Unknown pack(s): ${unknown.join(", ")}.`, {
+        hint: guesses.length ? `Did you mean ${guesses.join(", ")}? Available: ${available.join(", ")}` : `Available: ${available.join(", ")}`,
+      });
+    }
   }
   let next;
   if (mode === "add") {
@@ -170,8 +264,8 @@ function editPacks(cwd, names, mode, opts) {
   }
   doc.set("packs", next);
   if (opts["dry-run"]) {
-    log.info(c.dim(`Dry run: packs would become ${next.join(", ") || "(none)"}`));
-    return 0;
+    log.step(`Packs would become: ${next.join(", ") || "(none)"}`);
+    return runSync(cwd, { dryRun: true, packsOverride: next });
   }
   writeText(file, doc.toString());
   log.ok(`${mode === "add" ? "Enabled" : "Disabled"} ${names.join(", ")} in ${CONFIG_FILE}`);
@@ -261,9 +355,12 @@ export async function main(argv = process.argv.slice(2)) {
   const cwd = resolve(opts.cwd ?? process.cwd());
 
   if (opts.version) return log.info(VERSION), 0;
+  const helpFor = command === "help" ? rest[0] : opts.help ? command : undefined;
+  if (helpFor && COMMANDS[helpFor]) return log.info(commandHelp(helpFor)), 0;
   if (opts.help || !command || command === "help") {
     if (!command) banner();
-    log.info(HELP);
+    if (helpFor) log.warn(`No command "${helpFor}".`);
+    log.info(mainHelp());
     return 0;
   }
 
@@ -283,7 +380,10 @@ export async function main(argv = process.argv.slice(2)) {
         return cmdDoctor(cwd);
       default:
         log.error(`Unknown command "${command}".`);
-        log.info(c.dim("Run `bees --help` for usage."));
+        {
+          const guess = suggest(command, Object.keys(COMMANDS));
+          log.info(c.dim(guess ? `  Did you mean \`bees ${guess}\`? Run \`bees --help\` for all commands.` : "  Run `bees --help` for usage."));
+        }
         return 2;
     }
   } catch (err) {
