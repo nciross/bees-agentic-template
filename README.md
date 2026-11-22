@@ -83,6 +83,7 @@ flowchart LR
 | 📚 **docs** | README, ADR and changelog skills | bees |
 | 🐘🐟 **memory** | Elephant (long-term team memory in git) + Goldfish (short-term session memory, summarized then forgotten) | bees |
 | 👥 **team** | A named crew of agents — tech lead, architect, developer, designer, reviewer, security, QA, writer, token optimizer | bees |
+| 🏭 **factory** | Software factory: issue → spec → plan → tasks → build → verify → draft PR, run by the hive with human approval gates ([ADR 0002](docs/adr/0002-software-factory.md)) | bees |
 
 ### Supported tools
 
@@ -233,6 +234,8 @@ overrides:
 - [ ] Packs: quality, testing, git-flow, docs
 - [ ] Pack: memory — 🐘 elephant & 🐟 goldfish
 - [ ] Pack: team — named agents, draft → approve → post workflow
+- [ ] Pack: factory — 🏭 software factory pipeline ([ADR 0002](docs/adr/0002-software-factory.md))
+- [x] First alpha on npm: `bees-agentic@0.1.0-alpha.0`
 - [ ] **v0.1.0** release on npm as `bees-agentic`
 
 ## 🤝 Contributing
