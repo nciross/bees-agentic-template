@@ -19,8 +19,9 @@ bees has three layers of tests. All of them run on Linux, macOS and Windows, nee
 | `node-express-app` | pnpm + TypeScript + Express; already has a team `CLAUDE.md` and a `.claude/settings.json` that bees must merge into, not overwrite |
 | `python-fastapi-app` | uv + FastAPI + pytest + ruff; no existing agent config |
 | `packs/team-demo` | A third-party pack (loaded via `BEES_PACKS_DIR`) with a sub-agent and a rule |
+| `packs/factory-demo` | A pack that `requires: [team-demo]`, used to test dependency resolution in `init`, `add`, `remove`, `sync` and `doctor` |
 
-The suite checks, among other things: detection, idempotent sync, notes outside markers surviving, drift caught by `--check`, CRLF checkouts not counted as drift, pack removal cleaning up only bees-owned files, `bees.yaml` comments kept, broken markers and invalid config refused, and a tampered `bees.lock` unable to delete files outside the project.
+The suite checks, among other things: detection, idempotent sync, notes outside markers surviving, drift caught by `--check`, CRLF checkouts not counted as drift, pack removal cleaning up only bees-owned files, `bees.yaml` comments kept, broken markers and invalid config refused, a tampered `bees.lock` unable to delete files outside the project, and pack `requires:` being resolved on `init`/`add` and enforced on `remove`/`sync`.
 
 To add a fixture, create a folder under `test/fixtures/`, then use `copyFixture(t, "<name>")` and `bees([...args], { cwd })` from `test/helpers.js`.
 

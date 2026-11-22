@@ -42,6 +42,7 @@ Significant decisions are recorded as ADRs in [`docs/adr/`](docs/adr/). Copy the
 - Skills use the open [Agent Skills](https://agentskills.io) `SKILL.md` format so every tool can read them.
 - Keep skills **small and focused** — Theo, our token optimizer, will enforce budgets.
 - Third-party content is **referenced at a pinned version**, never copied. Include its license in `pack.yaml`.
+- If your pack builds on other packs, list them in `pack.yaml` as `requires: [team, spec]`. `bees add` enables them too, and `bees remove` won't remove a pack another enabled pack requires.
 
 ## Agent-written contributions
 
