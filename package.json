@@ -1,6 +1,6 @@
 {
   "name": "bees-agentic",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "One hive, every agent. Install a shared agentic dev environment (skills, agents, rules) into any project for Claude Code, Copilot, Cursor and Codex.",
   "license": "MIT",
   "author": "nciross",
