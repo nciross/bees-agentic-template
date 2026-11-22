@@ -12,7 +12,15 @@ const ALL = "--tools=claude,copilot,cursor,codex";
 
 test("help, version and unknown commands", (t) => {
   const cwd = tempDir(t);
-  assert.match(bees(["--help"], { cwd }).stdout, /Usage: bees <command>/);
+  assert.match(bees(["--help"], { cwd }).stdout, /Usage\s+bees <command>/);
+  for (const args of [["help", "sync"], ["sync", "--help"]]) {
+    const help = bees(args, { cwd }).stdout;
+    assert.match(help, /bees sync --check/, "command help has examples");
+    assert.doesNotMatch(help, /^Commands/m, "command help is not the full help");
+  }
+  const typo = bees(["snyc"], { cwd });
+  assert.equal(typo.code, 2);
+  assert.match(typo.out, /Did you mean `bees sync`/);
   assert.match(bees(["--version"], { cwd }).stdout, /^\d+\.\d+\.\d+/);
   assert.equal(bees(["fly"], { cwd }).code, 2);
   assert.equal(bees(["sync", "--nope"], { cwd }).code, 2);
@@ -144,6 +152,8 @@ test("remove and add packs: generated files go away, team content stays", (t) =>
   const unknown = bees(["add", "nope"], { cwd });
   assert.equal(unknown.code, 1);
   assert.match(unknown.out, /Unknown pack\(s\): nope/);
+  assert.match(bees(["add", "cor"], { cwd }).out, /Did you mean core\?/);
+  assert.match(bees(["add"], { cwd }).out, /Available packs: core/);
 });
 
 test("add keeps comments in bees.yaml", (t) => {
@@ -227,7 +237,10 @@ test("refuses to clobber: existing bees.yaml, broken markers, invalid config", (
 test("--dry-run writes nothing", (t) => {
   const cwd = copyFixture(t, "node-express-app");
   const before = readdirSync(cwd).sort();
-  assert.equal(bees(["init", "--yes", "--dry-run"], { cwd }).code, 0);
+  const initPreview = bees(["init", "--yes", "--dry-run"], { cwd });
+  assert.equal(initPreview.code, 0);
+  assert.match(initPreview.out, /\+ bees\.yaml/);
+  assert.match(initPreview.out, /\+ AGENTS\.md/);
   assert.deepEqual(readdirSync(cwd).sort(), before);
 
   bees(["init", "--yes", "--tools=claude"], { cwd });
@@ -235,6 +248,15 @@ test("--dry-run writes nothing", (t) => {
   const snapshot = readFileSync(join(cwd, "bees.lock"), "utf8");
   assert.match(bees(["sync", "--dry-run"], { cwd }).out, /\+ \.agents\/skills/);
   assert.equal(read(cwd, "bees.lock"), snapshot);
+
+  // add/remove --dry-run preview the files, not just the pack list.
+  bees(["sync"], { cwd });
+  const config = read(cwd, "bees.yaml");
+  const preview = bees(["remove", "core", "--dry-run"], { cwd }).out;
+  assert.match(preview, /Packs would become: \(none\)/);
+  assert.match(preview, /- \.claude\/skills\/project-context\/SKILL\.md/);
+  assert.equal(read(cwd, "bees.yaml"), config);
+  assert.ok(existsSync(join(cwd, ".claude/skills/project-context/SKILL.md")));
 });
 
 test("a tampered bees.lock cannot make sync delete files outside the project", (t) => {

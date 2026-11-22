@@ -9,24 +9,19 @@ bees is a small Node.js CLI. It runs the same on Linux, macOS and Windows (Power
 
 ## Option 1: run it without installing (recommended)
 
-Until v0.1.0 is published on npm, run bees straight from GitHub:
+bees is on npm as an alpha:
 
 ```bash
 cd your-existing-project
-npx github:nciross/bees-agentic-template init
+npx bees-agentic@alpha init
 ```
 
-Once it is on npm:
-
-```bash
-npx bees-agentic@latest init
-```
+To try unreleased changes from `main`, run it straight from GitHub instead: `npx github:nciross/bees-agentic-template init`.
 
 ## Option 2: install the `bees` command globally
 
 ```bash
-npm install -g github:nciross/bees-agentic-template   # today
-npm install -g bees-agentic                           # after the npm release
+npm install -g bees-agentic@alpha
 
 bees --version
 cd your-existing-project
@@ -40,7 +35,7 @@ Uninstall with `npm uninstall -g bees-agentic`.
 For JavaScript/TypeScript projects, pinning bees as a dev dependency keeps every teammate and CI on the same version:
 
 ```bash
-npm install --save-dev github:nciross/bees-agentic-template   # or: bees-agentic after the npm release
+npm install --save-dev bees-agentic@alpha
 npx bees init
 ```
 
@@ -113,7 +108,7 @@ Add a step that fails the build when someone edits `bees.yaml` without running `
 - uses: actions/setup-node@v4
   with:
     node-version: 22
-- run: npx --yes github:nciross/bees-agentic-template sync --check
+- run: npx --yes bees-agentic@alpha sync --check
 ```
 
 If bees is a dev dependency, use `npx bees sync --check` instead.
