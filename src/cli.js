@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { CONFIG_FILE, LOCK_FILE, TOOLS, TOOL_LABELS, loadConfig, readConfigDocument, validateConfig, writeConfig } from "./config.js";
 import { detectProject, detectTools } from "./detect.js";
 import { findRegion } from "./markers.js";
-import { listPacks, loadPack, loadPacks } from "./packs.js";
+import { dependentsOf, listPacks, loadPack, loadPacks, missingRequires, resolveRequires } from "./packs.js";
 import { applyPlan, computePlan } from "./sync.js";
 import { askList, banner, c, isInteractive, log, printChanges } from "./ui.js";
 import { BeesError, isDir, readText, writeText } from "./util.js";
@@ -19,8 +19,9 @@ Commands
   init                 Detect the stack, pick tools and packs, write bees.yaml, generate configs
   sync                 Re-generate configs from bees.yaml (idempotent, keeps your edits)
   sync --check         Exit 1 if generated configs are stale (use in CI)
-  add <pack...>        Enable packs and sync
-  remove <pack...>     Disable packs and sync (removes the files they generated)
+  add <pack...>        Enable packs (and the packs they require) and sync
+  remove <pack...>     Disable packs and sync (removes the files they generated;
+                       refuses while another enabled pack requires them)
   list                 List available packs
   doctor               Diagnose config, drift and broken markers
 
@@ -53,7 +54,16 @@ const splitList = (s) => [...new Set(String(s).split(/[\s,]+/).filter(Boolean))]
 function loadProject(cwd) {
   const available = listPacks();
   const { config, warnings } = loadConfig(cwd, available);
-  return { config, warnings, packs: loadPacks(config.packs) };
+  const packs = loadPacks(config.packs);
+  const missing = missingRequires(packs);
+  if (missing.length) {
+    const all = [...new Set(missing.flatMap((m) => m.missing))];
+    throw new BeesError(
+      missing.map((m) => `Pack "${m.pack}" requires ${m.missing.map((x) => `"${x}"`).join(", ")}, which ${m.missing.length > 1 ? "are" : "is"} not enabled.`).join("\n"),
+      { hint: `Run \`bees add ${all.join(" ")}\`.` },
+    );
+  }
+  return { config, warnings, packs };
 }
 
 /** Run a sync and report it. Returns the exit code. */
@@ -108,7 +118,9 @@ async function cmdInit(cwd, opts) {
   const { config, errors } = validateConfig({ version: 1, tools, packs }, available);
   if (errors.length) throw new BeesError(errors.join("\n"));
   tools = config.tools;
-  packs = config.packs;
+  const resolved = resolveRequires(config.packs);
+  for (const a of resolved.added) log.step(`Also enabling ${c.bold(a.name)} (required by ${a.by})`);
+  packs = resolved.names;
   log.step(`Tools: ${tools.map((t) => TOOL_LABELS[t]).join(", ")}`);
   log.step(`Packs: ${packs.join(", ") || "(none)"}`);
 
@@ -135,9 +147,23 @@ function editPacks(cwd, names, mode, opts) {
   if (mode === "add") {
     const unknown = names.filter((n) => !available.includes(n));
     if (unknown.length) throw new BeesError(`Unknown pack(s): ${unknown.join(", ")}.`, { hint: `Available: ${available.join(", ")}` });
-    for (const n of names) loadPack(n); // validate before touching bees.yaml
   }
-  const next = mode === "add" ? [...current, ...names.filter((n) => !current.includes(n))] : current.filter((n) => !names.includes(n));
+  let next;
+  if (mode === "add") {
+    // Validates every pack (and what it requires) before touching bees.yaml.
+    const { names: resolved, added } = resolveRequires(names);
+    for (const a of added) if (!current.includes(a.name)) log.step(`Also enabling ${c.bold(a.name)} (required by ${a.by})`);
+    next = [...current, ...resolved.filter((n) => !current.includes(n))];
+  } else {
+    next = current.filter((n) => !names.includes(n));
+    const blocked = dependentsOf(names, next.filter((n) => available.includes(n)));
+    if (blocked.length) {
+      throw new BeesError(
+        blocked.map((b) => `Can't remove ${b.needs.join(", ")}: pack "${b.pack}" requires ${b.needs.length > 1 ? "them" : "it"}.`).join("\n"),
+        { hint: `Remove the dependent pack too: \`bees remove ${[...new Set([...blocked.map((b) => b.pack), ...names])].join(" ")}\`` },
+      );
+    }
+  }
   if (next.length === current.length) {
     log.ok(mode === "add" ? "Already enabled." : "None of those packs are enabled.");
     return 0;
@@ -162,7 +188,8 @@ function cmdList(cwd) {
   for (const name of listPacks()) {
     const pack = loadPack(name);
     const mark = enabled.includes(name) ? c.green("●") : c.dim("○");
-    log.info(`${mark} ${c.bold(name)} ${c.dim(pack.version)}  ${pack.description}`);
+    const requires = pack.requires.length ? c.dim(`  (requires ${pack.requires.join(", ")})`) : "";
+    log.info(`${mark} ${c.bold(name)} ${c.dim(pack.version)}  ${pack.description}${requires}`);
   }
   return 0;
 }

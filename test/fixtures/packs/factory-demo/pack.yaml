@@ -1,0 +1,5 @@
+name: factory-demo
+version: 0.0.1
+description: Test fixture pack that requires team-demo.
+license: MIT
+requires: [team-demo]

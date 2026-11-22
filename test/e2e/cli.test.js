@@ -166,6 +166,39 @@ test("third-party pack dir: sub-agents for Claude, roles for Codex", (t) => {
   assert.match(bees(["doctor"], { cwd, env }).out, /core` pack is not enabled/);
 });
 
+test("pack requires: init and add pull in dependencies, remove and sync refuse to break them", (t) => {
+  const cwd = copyFixture(t, "python-fastapi-app");
+  const env = { BEES_PACKS_DIR: join(FIXTURES, "packs") };
+
+  const init = bees(["init", "--yes", "--tools=claude", "--packs=factory-demo"], { cwd, env });
+  assert.equal(init.code, 0, init.out);
+  assert.match(init.out, /Also enabling team-demo \(required by factory-demo\)/);
+  assert.deepEqual(YAML.parse(read(cwd, "bees.yaml")).packs, ["team-demo", "factory-demo"]);
+  assert.ok(existsSync(join(cwd, ".claude/agents/kenji.md")), "required pack generated");
+
+  const blocked = bees(["remove", "team-demo"], { cwd, env });
+  assert.equal(blocked.code, 1);
+  assert.match(blocked.out, /Can't remove team-demo: pack "factory-demo" requires it/);
+  assert.match(blocked.out, /bees remove factory-demo team-demo/);
+  assert.deepEqual(YAML.parse(read(cwd, "bees.yaml")).packs, ["team-demo", "factory-demo"], "bees.yaml untouched");
+
+  assert.equal(bees(["remove", "factory-demo", "team-demo"], { cwd, env }).code, 0);
+  assert.ok(!existsSync(join(cwd, ".claude/agents/kenji.md")));
+
+  const add = bees(["add", "factory-demo"], { cwd, env });
+  assert.equal(add.code, 0, add.out);
+  assert.deepEqual(YAML.parse(read(cwd, "bees.yaml")).packs, ["team-demo", "factory-demo"]);
+  assert.match(bees(["list"], { cwd, env }).stdout, /factory-demo .*\(requires team-demo\)/);
+
+  // A hand-edited bees.yaml that drops a required pack is caught.
+  write(cwd, "bees.yaml", read(cwd, "bees.yaml").replace(/^\s*- team-demo\r?\n/m, ""));
+  const sync = bees(["sync"], { cwd, env });
+  assert.equal(sync.code, 1);
+  assert.match(sync.out, /Pack "factory-demo" requires "team-demo", which is not enabled/);
+  assert.match(sync.out, /bees add team-demo/);
+  assert.equal(bees(["doctor"], { cwd, env }).code, 1);
+});
+
 test("refuses to clobber: existing bees.yaml, broken markers, invalid config", (t) => {
   const cwd = copyFixture(t, "node-express-app");
   bees(["init", "--yes", "--tools=claude"], { cwd });
