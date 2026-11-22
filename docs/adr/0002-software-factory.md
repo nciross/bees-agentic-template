@@ -60,7 +60,7 @@ A **gate** sits between two stages. It is either `human` (the pipeline stops unt
 
 ### State: files, not a server
 
-```
+```text
 .bees/factory/
   <id>/                     # id = issue number or a short slug, e.g. 42-export-csv
     work.yaml               # stage, owners, gate decisions, rework log, links to artifacts
